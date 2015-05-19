@@ -54,6 +54,21 @@ public:
 	// returns size in bytes of the variable
 	int getSize(){	return this->size ;	}
 
+	// returns pointer to value
+	char* getValue() { return this->value ; }
+
+	// returns type
+	varType getType() { return this->dataType ; }
+
+	// sets offset
+	void setOffset(int offset) {
+		this->offset = offset ;
+		return ;
+	}
+
+	// gets offset of the variable in the map
+	int getOffset() { return this->offset ; }
+
 private:
 	int 			size ;
 	int 			offset ;

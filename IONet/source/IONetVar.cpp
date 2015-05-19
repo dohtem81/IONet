@@ -45,11 +45,19 @@ IONetVar::IONetVar(char *dataPtr, varType type, std::string name, int offset) {
 		this->dataType 		= 	type ;
 		this->offset		=	offset ;
 		this->name			=	name ;
+
+		// set size of this variabe
+		if (type == integer)
+			this->size = sizeof(int);
+		if (type == real)
+			this->size = sizeof(float);
+
 	}
 }
 
 IONetVar::~IONetVar() {
 	// TODO Auto-generated destructor stub
 }
+
 
 } /* namespace ION */

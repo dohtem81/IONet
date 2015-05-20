@@ -6,7 +6,7 @@
  *   the Free Software Foundation, either version 3 of the License, or
  *   any later version.
  *
- *   RoverPlatform is distributed in the hope that it will be useful,
+ *   IONet is distributed in the hope that it will be useful,
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *   GNU General Public License for more details.
@@ -45,11 +45,19 @@ IONetVar::IONetVar(char *dataPtr, varType type, std::string name, int offset) {
 		this->dataType 		= 	type ;
 		this->offset		=	offset ;
 		this->name			=	name ;
+
+		// set size of this variabe
+		if (type == integer)
+			this->size = sizeof(int);
+		if (type == real)
+			this->size = sizeof(float);
+
 	}
 }
 
 IONetVar::~IONetVar() {
 	// TODO Auto-generated destructor stub
 }
+
 
 } /* namespace ION */

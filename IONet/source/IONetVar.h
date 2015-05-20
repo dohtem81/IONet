@@ -6,7 +6,7 @@
  *   the Free Software Foundation, either version 3 of the License, or
  *   any later version.
  *
- *   RoverPlatform is distributed in the hope that it will be useful,
+ *   IONet is distributed in the hope that it will be useful,
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *   GNU General Public License for more details.
@@ -53,6 +53,21 @@ public:
 
 	// returns size in bytes of the variable
 	int getSize(){	return this->size ;	}
+
+	// returns pointer to value
+	char* getValue() { return this->value ; }
+
+	// returns type
+	varType getType() { return this->dataType ; }
+
+	// sets offset
+	void setOffset(int offset) {
+		this->offset = offset ;
+		return ;
+	}
+
+	// gets offset of the variable in the map
+	int getOffset() { return this->offset ; }
 
 private:
 	int 			size ;

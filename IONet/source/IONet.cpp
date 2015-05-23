@@ -22,7 +22,7 @@
 #include "IONetVar.h"
 #include "IONetPage.h"
 #include <iostream>
-//#include <map>
+#include <libpq-fe.h>
 
 namespace ION {
 
@@ -32,6 +32,72 @@ IONet::IONet() {
 
 	// create map to keep all pages
 	this->ioPages	=	new std::map<int, IONetPage> ();
+
+	// create connection to the server
+	this->databaseConnection = PQconnectdb("host=localhost user=postgres password=postgres dbname=RoverConfiguration");
+
+	//check connection status
+	switch (PQstatus(this->databaseConnection)) {
+	case CONNECTION_OK:
+		std::cout << "Connection is OK" << std::endl ;
+		break ;
+	case CONNECTION_BAD:
+		std::cout << "Connection is bad." << std::endl ;
+		break ;
+	default:
+		std::cout << "status is other" << std::endl ;
+		break ;
+	}
+
+	// now we get list of variables
+	bool resultOK = false ;
+	PGresult *queryResult = PQexec( this->databaseConnection, "select * from public.\"IONetwork\"" ) ;
+	if (queryResult != NULL) {
+		switch (PQresultStatus(queryResult)){
+		case PGRES_TUPLES_OK:
+			std::cout << "result OK" << std::endl ;
+			resultOK = true ;
+			break ;
+		case PGRES_COMMAND_OK:
+			std::cout << "command OK" << std::endl ;
+			resultOK = true ;
+			break ;
+		case PGRES_EMPTY_QUERY:
+			std::cout << "empty query" << std::endl ;
+			break ;
+		case PGRES_BAD_RESPONSE:
+			std::cout << "bad response" << std::endl ;
+			break ;
+		case PGRES_FATAL_ERROR:
+			std::cout << "fatal error: " << PQerrorMessage(this->databaseConnection) << std::endl ;
+			break ;
+		case PGRES_NONFATAL_ERROR:
+			std::cout << "non-fatal error" << std::endl ;
+			break ;
+		default:
+			std::cout << "result not OK" << std::endl ;
+			break ;
+		}
+	} else {
+		std::cout << "result is NULL" << std::endl ;
+	}
+
+	// of there were rows returned
+	if (resultOK) {
+		std::cout << "returned " << PQntuples(queryResult) << " rows x "
+				  << PQnfields(queryResult) << " columns" << std::endl ;
+		std::cout << "-----------------" << std::endl ;
+
+		int returnedRows = PQntuples(queryResult) ;
+		int returnedCols = PQnfields(queryResult) ;
+
+		for (int i=0; i<returnedRows; i++){
+			std::cout << PQgetvalue(queryResult, i, 0)
+					  << "\t" << PQgetvalue(queryResult, i, 1) << std::endl ;
+		}
+
+	}
+
 }
 
 IONet::~IONet() {

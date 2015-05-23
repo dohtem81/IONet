@@ -25,6 +25,7 @@
 #include <string>
 #include "IONetVar.h"
 #include "IONetPage.h"
+#include <libpq-fe.h>
 
 namespace ION {
 
@@ -41,6 +42,7 @@ public:
 
 private:
 	std::map<int, IONetPage>		*ioPages ;
+	PGconn							*databaseConnection ;
 };
 
 } /* namespace ION */

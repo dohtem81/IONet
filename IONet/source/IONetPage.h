@@ -1,12 +1,20 @@
 /*
  *   This file is part of IONet.
  *
+<<<<<<< HEAD
+ *   IONet is free software: you can redistribute it and/or modify
+=======
  *   RoverPlatform is free software: you can redistribute it and/or modify
+>>>>>>> 376b3c54b712d5ce946455ae54ba2d7573f07313
  *   it under the terms of the GNU General Public License as published by
  *   the Free Software Foundation, either version 3 of the License, or
  *   any later version.
  *
+<<<<<<< HEAD
+ *   IONet is distributed in the hope that it will be useful,
+=======
  *   RoverPlatform is distributed in the hope that it will be useful,
+>>>>>>> 376b3c54b712d5ce946455ae54ba2d7573f07313
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *   GNU General Public License for more details.

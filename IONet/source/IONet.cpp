@@ -31,6 +31,7 @@
 #include "IONetPage.h"
 #include <iostream>
 #include <libpq-fe.h>
+#include <string>
 
 namespace ION {
 
@@ -99,11 +100,22 @@ IONet::IONet() {
 		int returnedRows = PQntuples(queryResult) ;
 		int returnedCols = PQnfields(queryResult) ;
 
+		// create temporary map
+		std::map<std::string, IONetVar> *tempMap = new std::map<std::string, IONetVar>() ;
+
 		for (int i=0; i<returnedRows; i++){
-			std::cout << PQgetvalue(queryResult, i, 0)
-					  << "\t" << PQgetvalue(queryResult, i, 1) << std::endl ;
+			int *variable = new int();
+			std::string varName = PQgetvalue(queryResult, i, 0) ;
+
+			IONetVar *netVarA = new IONetVar((char*)variable, integer, varName) ;
+			tempMap->insert(std::pair<std::string, IONetVar>(varName, *netVarA)) ;
+			delete variable ;
+			delete netVarA ;
 		}
 
+		// add new page
+		this->addPage(1, *tempMap);
+		delete tempMap ;
 	}
 
 }
@@ -164,41 +176,10 @@ int main() {
 
 	IONet *network = new IONet();
 
-	int varA, varB ;
-	float varC ;
-
-	// set values
-	varA = 1 ;
-	varB = 2 ;
-	varC = 3.1 ;
-
-	IONetVar *netVarA, *netVarB, *netVarC ;
-
-	netVarA = new IONetVar((char*)&varA, integer, "varA") ;
-	netVarB = new IONetVar((char*)&varB, integer, "varB") ;
-	netVarC = new IONetVar((char*)&varC, real, "varC") ;
-
-	std::map<std::string, IONetVar> *tempMap = new std::map<std::string, IONetVar>() ;
-	tempMap->insert(std::pair<std::string, IONetVar>(netVarA->getName(), *netVarA)) ;
-	tempMap->insert(std::pair<std::string, IONetVar>(netVarB->getName(), *netVarB)) ;
-	tempMap->insert(std::pair<std::string, IONetVar>(netVarC->getName(), *netVarC)) ;
-
-	// add new page to network
-	network->addPage(1, *tempMap);
-	network->addPage(1, *tempMap);
-
-	// delete objects
-	tempMap->empty();
-	delete tempMap ;
-	delete netVarA ;
-	delete netVarB ;
-	delete netVarC ;
-
 	// here we can test page
 	network->printPage(1);
-	network->printPage(2);
 
-	std::cout << "done..." << std::endl ;
+	std::cout << std::endl << "done..." << std::endl ;
 
 	return 0 ;
 }

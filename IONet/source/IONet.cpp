@@ -32,6 +32,7 @@
 #include <iostream>
 #include <libpq-fe.h>
 #include <string>
+#include "IONetConfiguration.h"
 
 namespace ION {
 
@@ -43,6 +44,10 @@ IONet::IONet() {
 	this->ioPages	=	new std::map<int, IONetPage> ();
 
 	// create connection to the server
+	std::string conncetString = CS_SUP_HOST + " " +
+								CS_SUP_USER + " " +
+								CS_SUP_PWD + " " +
+								CS_SUP_DBNAME ;
 	this->databaseConnection = PQconnectdb("host=localhost user=postgres password=postgres dbname=RoverConfiguration");
 
 	//check connection status

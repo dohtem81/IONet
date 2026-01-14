@@ -84,22 +84,48 @@ if (packet.ok()) {
 }
 ```
 
-## Building
+## Prerequisites
 
-Requires C++20 compatible compiler.
+- CMake 3.20+
+- C++20 compatible compiler (GCC 10+, Clang 12+, MSVC 2019+)
+- Ninja build system (optional but recommended)
+- Docker & Docker Compose (for containerized builds)
+
+## Building
 
 ```bash
 # Using Docker (recommended)
 docker compose run --rm dev
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build
-ctest --test-dir build --output-on-failure
 
 # Or directly on host
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 ```
+
+## Running Tests
+
+```bash
+# Run all tests
+ctest --test-dir build --output-on-failure
+
+# Run specific test
+./build/tests/test_decoder
+```
+
+See [tests/](tests/) for available test suites.
+
+## Example Schemas
+
+Check [schemas/example_telemetry.yaml](schemas/example_telemetry.yaml) for a complete schema example.
+
+## Project Status
+
+**Current**: Core decoding functionality, schema loading, basic type support
+**In Progress**: Encoder implementation, bitfield support, validation
+**Planned**: JSON schema support, schema versioning, performance optimizations
 
 ## Project Structure
 

@@ -11,6 +11,7 @@ option(IONET_COVERAGE "Enable coverage reporting" OFF)
 add_library(ionet STATIC
     src/core/ByteBuffer.cpp
     src/schema/Schema.cpp
+    src/codec/Decoder.cpp
 )
 
 target_include_directories(ionet PUBLIC 

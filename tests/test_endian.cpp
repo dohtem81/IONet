@@ -17,4 +17,11 @@ TEST_CASE("Byte swap 64-bit", "[endian]") {
 
 TEST_CASE("needsSwap logic", "[endian]") {
     REQUIRE(endian::needsSwap(ByteOrder::Native) == false);
+    
+    // On little-endian systems, we need swap for big-endian data
+    // On big-endian systems, we need swap for little-endian data
+    bool isLittleEndian = (endian::getNativeByteOrder() == ByteOrder::Little);
+    
+    REQUIRE(endian::needsSwap(ByteOrder::Big) == isLittleEndian);
+    REQUIRE(endian::needsSwap(ByteOrder::Little) == !isLittleEndian);
 }

@@ -83,6 +83,22 @@ public:
         return *this;
     }
     
+    /// Alias for scaled
+    SchemaBuilder& scale(double scale) {
+        return scaled(scale, 0.0);
+    }
+    
+    /// Set offset for last field
+    SchemaBuilder& offset(double off) {
+        ensureField();
+        if (!currentPacket_->fields.back().scaling) {
+            currentPacket_->fields.back().scaling = Scaling{1.0, off};
+        } else {
+            currentPacket_->fields.back().scaling->offset = off;
+        }
+        return *this;
+    }
+    
     /// Add unit to last field
     SchemaBuilder& unit(std::string u) {
         ensureField();
@@ -116,6 +132,22 @@ public:
             throw std::logic_error("flag() can only be called after bitfield()");
         }
         f.bitFlags.push_back(BitFlag{bit, std::move(name), std::move(desc)});
+        return *this;
+    }
+    
+    /// Add a string field
+    SchemaBuilder& string(std::string name, std::size_t size) {
+        ensurePacket();
+        Field f;
+        f.name = std::move(name);
+        f.type = core::DataType::String;
+        f.stringSize = size;
+        currentPacket_->fields.push_back(std::move(f));
+        return *this;
+    }
+    
+    /// Finish current field configuration (no-op, for fluent API)
+    SchemaBuilder& done() {
         return *this;
     }
     

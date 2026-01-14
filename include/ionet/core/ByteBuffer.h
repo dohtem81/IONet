@@ -25,6 +25,7 @@ public:
         T value;
         std::memcpy(&value, data_.data() + position_, sizeof(T));
         position_ += sizeof(T);
+        lastOpWasByteRead_ = true;
         
         return endian::convert<T>(value, order_);
     }
@@ -36,6 +37,7 @@ public:
         }
         auto result = data_.subspan(position_, count);
         position_ += count;
+        lastOpWasByteRead_ = true;
         return result;
     }
 
@@ -53,6 +55,7 @@ private:
     
     // For bit-level reading
     std::size_t bitPosition_ = 0;
+    bool lastOpWasByteRead_ = false;
 };
 
 } // namespace ionet::core

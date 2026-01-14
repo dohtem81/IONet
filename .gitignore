@@ -1,0 +1,107 @@
+# Build directories
+build/
+build-*/
+cmake-build-*/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+_deps/
+
+# Compiled Object files
+*.o
+*.obj
+*.ko
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.a
+*.lib
+*.la
+*.lo
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Testing
+Testing/
+tests/test_*
+!tests/test_*.cpp
+CTestCostData.txt
+
+# Coverage
+*.gcno
+*.gcda
+*.gcov
+coverage/
+*.info
+
+# IDE specific
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Package managers
+conan/
+vcpkg_installed/
+_deps/
+
+# Documentation
+docs/html/
+docs/latex/
+*.autosave
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+*.tlog
+
+# Core dumps
+core
+core.*
+
+# Python (if you add any scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+ENV/
+
+# System files
+.DS_Store
+Thumbs.db

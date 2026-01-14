@@ -1,0 +1,70 @@
+services:
+  # Development environment - interactive shell
+  dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: ionet-dev:latest
+    container_name: ionet-dev
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+
+  # Build the project
+  build:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: build
+    image: ionet-build:latest
+    container_name: ionet-build
+
+  # Run tests
+  test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: build
+    image: ionet-build:latest
+    container_name: ionet-test
+    command: sh -c "cd build && ctest --output-on-failure -V"
+
+  # Run tests with coverage
+  coverage:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: test
+    image: ionet-coverage:latest
+    container_name: ionet-coverage
+    volumes:
+      - ./coverage:/workspace/coverage
+    command: >
+      sh -c "
+        cd build &&
+        lcov --capture --directory . --output-file coverage.info &&
+        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/Catch2/*' --output-file coverage.info &&
+        genhtml coverage.info --output-directory /workspace/coverage
+      "
+
+  # Static analysis
+  lint:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: dev
+    image: ionet-dev:latest
+    container_name: ionet-lint
+    volumes:
+      - .:/workspace
+    command: >
+      sh -c "
+        clang-format --dry-run --Werror include/ionet/**/*.h src/**/*.cpp &&
+        cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON &&
+        clang-tidy -p build include/ionet/core/*.h src/core/*.cpp
+      "
+
+volumes:
+  build-cache:

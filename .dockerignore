@@ -1,0 +1,24 @@
+# Build artifacts
+build/
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage output
+coverage/
+
+# Git
+.git/
+.gitignore
+
+# Docker (don't include docker context in itself)
+docker-compose*.yml

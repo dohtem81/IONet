@@ -1,0 +1,29 @@
+schema:
+  name: "RocketTelemetry"
+  version: "1.0"
+  byte_order: "big"  # or "little"
+
+packets:
+  - id: 0x01
+    name: "FlightData"
+    fields:
+      - name: "timestamp"
+        type: "uint64"
+        unit: "microseconds"
+      - name: "altitude"
+        type: "float32"
+        unit: "meters"
+      - name: "velocity"
+        type: "float32"
+        unit: "m/s"
+      - name: "engine_status"
+        type: "bitfield"
+        bits: 8
+        flags:
+          - { bit: 0, name: "engine_1_active" }
+          - { bit: 1, name: "engine_2_active" }
+          - { bit: 2, name: "engine_3_active" }
+      - name: "gps_lat"
+        type: "int32"
+        scale: 0.0000001  # scaled integer
+        unit: "degrees"

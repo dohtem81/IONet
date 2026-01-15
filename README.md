@@ -71,16 +71,22 @@ packets:
 #include <ionet/codec/Decoder.h>
 
 // Load schema from file
-auto schema = ionet::schema::SchemaLoader::fromFile("telemetry.yaml");
+auto schemaResult = ionet::schema::SchemaLoader::fromFile("telemetry.yaml");
+if (!schemaResult.ok()) {
+    // handle error
+}
+auto schema = schemaResult.value();
 
 // Decode incoming data
 std::vector<uint8_t> rawData = receiveFromNetwork();
 ionet::codec::Decoder decoder(schema);
 
-auto packet = decoder.decode(0x01, rawData);
-if (packet.ok()) {
-    auto altitude = std::get<double>(packet.value()["altitude"]);
-    auto engineOn = std::get<std::map<std::string, bool>>(packet.value()["engine_status"]);
+auto packetResult = decoder.decode(0x01, rawData);
+if (packetResult.ok()) {
+    const auto& packet = packetResult.value();
+    auto altitude = packet.get<double>("altitude");
+    auto engineStatus = packet.field("engine_status");
+    // Use altitude and engineStatus as needed
 }
 ```
 
@@ -112,7 +118,7 @@ make
 ctest --test-dir build --output-on-failure
 
 # Run specific test
-./build/tests/test_decoder
+./build/tests/ionet_tests
 ```
 
 See [tests/](tests/) for available test suites.
@@ -123,9 +129,26 @@ Check [schemas/example_telemetry.yaml](schemas/example_telemetry.yaml) for a com
 
 ## Project Status
 
-**Current**: Core decoding functionality, schema loading, basic type support
-**In Progress**: Encoder implementation, bitfield support, validation
-**Planned**: JSON schema support, schema versioning, performance optimizations
+### Implemented
+- Schema loading from YAML and JSON
+- Core decoding functionality (Decoder, DecodedPacket)
+- ByteBufferReader/Writer with endian support
+- Bitfield and scaling support
+- Type-safe field access
+- Constraint validation
+- Comprehensive unit tests
+
+### In Progress
+- Encoder (binary serialization from structured data)
+- Advanced bitfield manipulation
+- Schema validation improvements
+
+### Planned
+- Schema versioning and migration tools
+- Performance optimizations
+- Extended protocol features (custom field types, arrays)
+- CLI tools for schema inspection and test generation
+- More example schemas and usage guides
 
 ## Project Structure
 

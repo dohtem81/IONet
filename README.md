@@ -166,7 +166,7 @@ IONet/
 
 ## Background
 
-This project is a C++ implementation of an idea I first developed years ago in C# - a system where all TCP communication is defined in configuration files. The actual application code doesn't need to know anything about the underlying message format; it simply accesses ready-to-use structured data.
+This project is a C++ implementation of an idea I first developed years ago in C++ - a system where all TCP communication is defined in configuration files. The actual application code doesn't need to know anything about the underlying message format; it simply accesses ready-to-use structured data.
 
 This design:
 - Separates protocol concerns from business logic

@@ -1,5 +1,4 @@
-#include "../../include/ionet/schema/SchemaParser.h"
-#include "../../include/ionet/core/Types.h"
+#include "ionet/schema/SchemaParser.h"
 #include <nlohmann/json.hpp>
 
 namespace ionet::schema {
@@ -8,39 +7,18 @@ namespace {
 
 using json = nlohmann::json;
 
-core::DataType parseDataType(const std::string& typeStr) {
-    if (typeStr == "int8")     return core::DataType::Int8;
-    if (typeStr == "int16")    return core::DataType::Int16;
-    if (typeStr == "int32")    return core::DataType::Int32;
-    if (typeStr == "int64")    return core::DataType::Int64;
-    if (typeStr == "uint8")    return core::DataType::UInt8;
-    if (typeStr == "uint16")   return core::DataType::UInt16;
-    if (typeStr == "uint32")   return core::DataType::UInt32;
-    if (typeStr == "uint64")   return core::DataType::UInt64;
-    if (typeStr == "float32")  return core::DataType::Float32;
-    if (typeStr == "float64")  return core::DataType::Float64;
-    if (typeStr == "bitfield") return core::DataType::Bitfield;
-    if (typeStr == "string")   return core::DataType::String;
-    
-    throw std::runtime_error("Unknown data type: " + typeStr);
+ir::IRBitFlag parseIRBitFlag(const json& j) {
+    ir::IRBitFlag flag;
+    flag.bit = j["bit"].get<uint8_t>();
+    flag.name = j["name"].get<std::string>();
+    if (j.contains("description")) {
+        flag.description = j["description"].get<std::string>();
+    }
+    return flag;
 }
 
-core::ByteOrder parseByteOrder(const std::string& orderStr) {
-    if (orderStr == "big" || orderStr == "be" || orderStr == "big_endian") {
-        return core::ByteOrder::Big;
-    }
-    if (orderStr == "little" || orderStr == "le" || orderStr == "little_endian") {
-        return core::ByteOrder::Little;
-    }
-    if (orderStr == "native") {
-        return core::ByteOrder::Native;
-    }
-    
-    throw std::runtime_error("Unknown byte order: " + orderStr);
-}
-
-Field parseField(const json& j) {
-    Field field;
+ir::IRField parseIRField(const json& j) {
+    ir::IRField field;
     
     if (!j.contains("name")) {
         throw std::runtime_error("Field missing 'name'");
@@ -50,51 +28,24 @@ Field parseField(const json& j) {
     if (!j.contains("type")) {
         throw std::runtime_error("Field '" + field.name + "' missing 'type'");
     }
-    field.type = parseDataType(j["type"].get<std::string>());
+    field.type = j["type"].get<std::string>();
     
     if (j.contains("description")) {
         field.description = j["description"].get<std::string>();
     }
-    
     if (j.contains("unit")) {
         field.unit = j["unit"].get<std::string>();
     }
     
-    if (j.contains("scale") || j.contains("offset")) {
-        Scaling scaling;
-        if (j.contains("scale")) {
-            scaling.scale = j["scale"].get<double>();
-        }
-        if (j.contains("offset")) {
-            scaling.offset = j["offset"].get<double>();
-        }
-        field.scaling = scaling;
+    // Scaling
+    if (j.contains("scale")) {
+        field.scaling.scale = j["scale"].get<double>();
+    }
+    if (j.contains("offset")) {
+        field.scaling.offset = j["offset"].get<double>();
     }
     
-    if (j.contains("bits")) {
-        field.bitCount = j["bits"].get<uint8_t>();
-    }
-    
-    if (j.contains("flags")) {
-        for (const auto& flagJson : j["flags"]) {
-            BitFlag flag;
-            flag.bit = flagJson["bit"].get<uint8_t>();
-            flag.name = flagJson["name"].get<std::string>();
-            if (flagJson.contains("description")) {
-                flag.description = flagJson["description"].get<std::string>();
-            }
-            field.bitFlags.push_back(std::move(flag));
-        }
-    }
-    
-    if (j.contains("size")) {
-        if (field.type == core::DataType::String) {
-            field.stringSize = j["size"].get<std::size_t>();
-        } else {
-            field.arraySize = j["size"].get<std::size_t>();
-        }
-    }
-    
+    // Constraints
     if (j.contains("min")) {
         field.constraints.min = j["min"].get<double>();
     }
@@ -102,11 +53,26 @@ Field parseField(const json& j) {
         field.constraints.max = j["max"].get<double>();
     }
     
+    // Bitfield
+    if (j.contains("bits")) {
+        field.bitCount = j["bits"].get<uint8_t>();
+    }
+    if (j.contains("flags")) {
+        for (const auto& flagJson : j["flags"]) {
+            field.bitFlags.push_back(parseIRBitFlag(flagJson));
+        }
+    }
+    
+    // Size
+    if (j.contains("size")) {
+        field.size = j["size"].get<std::size_t>();
+    }
+    
     return field;
 }
 
-Packet parsePacket(const json& j) {
-    Packet packet;
+ir::IRPacket parseIRPacket(const json& j) {
+    ir::IRPacket packet;
     
     if (!j.contains("id")) {
         throw std::runtime_error("Packet missing 'id'");
@@ -127,7 +93,7 @@ Packet parsePacket(const json& j) {
     }
     
     for (const auto& fieldJson : j["fields"]) {
-        packet.fields.push_back(parseField(fieldJson));
+        packet.fields.push_back(parseIRField(fieldJson));
     }
     
     return packet;
@@ -135,48 +101,44 @@ Packet parsePacket(const json& j) {
 
 } // anonymous namespace
 
+ir::IRSchema JsonSchemaParser::parseToIR(std::string_view content) {
+    json root = json::parse(content);
+    
+    ir::IRSchema ir;
+    
+    // Parse schema info
+    if (root.contains("schema")) {
+        const auto& schemaJson = root["schema"];
+        if (schemaJson.contains("name")) {
+            ir.info.name = schemaJson["name"].get<std::string>();
+        }
+        if (schemaJson.contains("version")) {
+            ir.info.version = schemaJson["version"].get<std::string>();
+        }
+        if (schemaJson.contains("description")) {
+            ir.info.description = schemaJson["description"].get<std::string>();
+        }
+        if (schemaJson.contains("byte_order")) {
+            ir.info.byteOrder = schemaJson["byte_order"].get<std::string>();
+        }
+    }
+    
+    // Parse packets
+    if (!root.contains("packets") || !root["packets"].is_array()) {
+        throw std::runtime_error("Schema missing 'packets' array");
+    }
+    
+    for (const auto& packetJson : root["packets"]) {
+        ir.packets.push_back(parseIRPacket(packetJson));
+    }
+    
+    return ir;
+}
+
 core::Result<Schema> JsonSchemaParser::parse(std::string_view content) {
     try {
-        json root = json::parse(content);
-        
-        Schema schema;
-        
-        if (root.contains("schema")) {
-            const auto& schemaJson = root["schema"];
-            SchemaInfo info;
-            
-            if (schemaJson.contains("name")) {
-                info.name = schemaJson["name"].get<std::string>();
-            }
-            if (schemaJson.contains("version")) {
-                info.version = schemaJson["version"].get<std::string>();
-            }
-            if (schemaJson.contains("description")) {
-                info.description = schemaJson["description"].get<std::string>();
-            }
-            
-            schema.setInfo(std::move(info));
-            
-            if (schemaJson.contains("byte_order")) {
-                schema.setByteOrder(parseByteOrder(schemaJson["byte_order"].get<std::string>()));
-            }
-        }
-        
-        if (!root.contains("packets") || !root["packets"].is_array()) {
-            return core::Error{"Schema missing 'packets' array"};
-        }
-        
-        for (const auto& packetJson : root["packets"]) {
-            schema.addPacket(parsePacket(packetJson));
-        }
-        
-        std::string validationError;
-        if (!schema.validate(&validationError)) {
-            return core::Error{"Schema validation failed: " + validationError};
-        }
-        
-        return schema;
-        
+        auto ir = parseToIR(content);
+        return buildSchema(ir);
     } catch (const json::exception& e) {
         return core::Error{"JSON parse error: " + std::string(e.what())};
     } catch (const std::exception& e) {

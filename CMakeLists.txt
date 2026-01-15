@@ -35,6 +35,7 @@ add_library(ionet STATIC
     src/core/ByteBuffer.cpp
     src/schema/Schema.cpp
     src/schema/SchemaSource.cpp
+    src/schema/SchemaParserBase.cpp
     src/schema/YamlSchemaParser.cpp
     src/schema/JsonSchemaParser.cpp
     src/schema/SchemaLoader.cpp

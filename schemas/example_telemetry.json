@@ -1,0 +1,130 @@
+{
+  "schema": {
+    "name": "RocketTelemetry",
+    "version": "1.0",
+    "description": "Flight telemetry for small launch vehicles",
+    "byte_order": "big"
+  },
+  "packets": [
+    {
+      "id": 1,
+      "name": "FlightData",
+      "description": "High-rate flight telemetry",
+      "fields": [
+        {
+          "name": "timestamp",
+          "type": "uint64",
+          "unit": "microseconds",
+          "description": "Mission elapsed time"
+        },
+        {
+          "name": "altitude",
+          "type": "float32",
+          "unit": "meters",
+          "description": "Altitude above sea level"
+        },
+        {
+          "name": "velocity",
+          "type": "float32",
+          "unit": "m/s",
+          "description": "Vertical velocity"
+        },
+        {
+          "name": "temperature",
+          "type": "int16",
+          "scale": 0.01,
+          "offset": -40.0,
+          "unit": "celsius",
+          "description": "Ambient temperature",
+          "min": -40.0,
+          "max": 85.0
+        },
+        {
+          "name": "engine_status",
+          "type": "bitfield",
+          "bits": 8,
+          "flags": [
+            { "bit": 0, "name": "engine_1_active", "description": "Engine 1 firing" },
+            { "bit": 1, "name": "engine_2_active", "description": "Engine 2 firing" },
+            { "bit": 2, "name": "fuel_low", "description": "Fuel below 10%" },
+            { "bit": 7, "name": "abort_commanded", "description": "Abort sequence initiated" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "GPS",
+      "description": "GPS position data",
+      "fields": [
+        {
+          "name": "latitude",
+          "type": "int32",
+          "scale": 1e-7,
+          "unit": "degrees",
+          "description": "Latitude in degrees"
+        },
+        {
+          "name": "longitude",
+          "type": "int32",
+          "scale": 1e-7,
+          "unit": "degrees",
+          "description": "Longitude in degrees"
+        },
+        {
+          "name": "altitude_gps",
+          "type": "int32",
+          "scale": 0.001,
+          "unit": "meters",
+          "description": "GPS altitude"
+        },
+        {
+          "name": "num_satellites",
+          "type": "uint8",
+          "description": "Number of satellites in view"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "SystemStatus",
+      "description": "System health and status",
+      "fields": [
+        {
+          "name": "uptime",
+          "type": "uint32",
+          "unit": "seconds",
+          "description": "System uptime"
+        },
+        {
+          "name": "battery_voltage",
+          "type": "uint16",
+          "scale": 0.001,
+          "unit": "volts",
+          "description": "Battery voltage",
+          "min": 0.0,
+          "max": 16.0
+        },
+        {
+          "name": "cpu_temperature",
+          "type": "int8",
+          "unit": "celsius",
+          "description": "CPU temperature"
+        },
+        {
+          "name": "status_flags",
+          "type": "bitfield",
+          "bits": 16,
+          "flags": [
+            { "bit": 0, "name": "gps_lock", "description": "GPS has fix" },
+            { "bit": 1, "name": "imu_ready", "description": "IMU initialized" },
+            { "bit": 2, "name": "radio_connected", "description": "Radio link active" },
+            { "bit": 3, "name": "logging_active", "description": "Data logging enabled" },
+            { "bit": 14, "name": "warning", "description": "Non-critical warning" },
+            { "bit": 15, "name": "error", "description": "Critical error" }
+          ]
+        }
+      ]
+    }
+  ]
+}

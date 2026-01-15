@@ -11,7 +11,7 @@ add_executable(ionet_tests
     test_endian.cpp
     test_bytebuffer.cpp
     test_schema.cpp
-    test_decoder.cpp
+    test_schema_loader.cpp
 )
 
 target_link_libraries(ionet_tests PRIVATE ionet Catch2::Catch2WithMain)

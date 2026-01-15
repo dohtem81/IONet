@@ -39,6 +39,8 @@ add_library(ionet STATIC
     src/schema/YamlSchemaParser.cpp
     src/schema/JsonSchemaParser.cpp
     src/schema/SchemaLoader.cpp
+    src/codec/DecodedPacket.cpp
+    src/codec/Decoder.cpp
 )
 
 target_include_directories(ionet PUBLIC 

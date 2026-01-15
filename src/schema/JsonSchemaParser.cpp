@@ -1,4 +1,4 @@
-#include "ionet/schema/SchemaParser.h"
+#include "../../include/ionet/schema/SchemaParser.h"
 #include <nlohmann/json.hpp>
 
 namespace ionet::schema {

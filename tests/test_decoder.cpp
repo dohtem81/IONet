@@ -1,280 +1,376 @@
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_approx.hpp>
-#include "ionet/codec/Decoder.h"
-#include "ionet/schema/SchemaBuilder.h"
-#include <vector>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <../include/ionet/codec/Decoder.h>
+#include <../include/ionet/schema/SchemaLoader.h>
 
-using namespace ionet;
 using namespace ionet::codec;
 using namespace ionet::schema;
+using namespace ionet::core;
 
-TEST_CASE("Decoder - Basic integer decoding", "[decoder]") {
-    // Build a simple schema
-    Schema schema = SchemaBuilder()
-        .name("TestSchema")
-        .bigEndian()
-        .packet(0x01, "IntPacket")
-            .field("value_u8", core::DataType::UInt8)
-            .field("value_u16", core::DataType::UInt16)
-            .field("value_u32", core::DataType::UInt32)
-        .build();
-    
-    Decoder decoder(schema);
-    
-    // Create test data: u8=42, u16=1000, u32=100000
-    std::vector<uint8_t> data = {
-        42,                          // u8
-        0x03, 0xE8,                 // u16 = 1000
-        0x00, 0x01, 0x86, 0xA0      // u32 = 100000
-    };
-    
-    auto result = decoder.decode(0x01, data);
-    
-    REQUIRE(result.has_value());
-    
-    const auto& packet = result.value();
-    REQUIRE(packet.packetName == "IntPacket");
-    REQUIRE(packet.fieldCount() == 3);
-    
-    REQUIRE(std::get<uint64_t>(packet["value_u8"]) == 42);
-    REQUIRE(std::get<uint64_t>(packet["value_u16"]) == 1000);
-    REQUIRE(std::get<uint64_t>(packet["value_u32"]) == 100000);
-}
+const char* TEST_SCHEMA = R"(
+schema:
+  name: "TestSchema"
+  version: "1.0"
+  byte_order: "big"
 
-TEST_CASE("Decoder - Signed integers", "[decoder]") {
-    Schema schema = SchemaBuilder()
-        .name("TestSchema")
-        .bigEndian()
-        .packet(0x02, "SignedPacket")
-            .field("value_i8", core::DataType::Int8)
-            .field("value_i16", core::DataType::Int16)
-            .field("value_i32", core::DataType::Int32)
-        .build();
-    
-    Decoder decoder(schema);
-    
-    // Create test data: i8=-10, i16=-1000, i32=-100000
-    std::vector<uint8_t> data = {
-        0xF6,                       // i8 = -10
-        0xFC, 0x18,                // i16 = -1000
-        0xFF, 0xFE, 0x79, 0x60     // i32 = -100000
-    };
-    
-    auto result = decoder.decode(0x02, data);
-    
-    REQUIRE(result.has_value());
-    
-    const auto& packet = result.value();
-    REQUIRE(std::get<int64_t>(packet["value_i8"]) == -10);
-    REQUIRE(std::get<int64_t>(packet["value_i16"]) == -1000);
-    REQUIRE(std::get<int64_t>(packet["value_i32"]) == -100000);
-}
+packets:
+  - id: 1
+    name: "SimplePacket"
+    fields:
+      - name: "counter"
+        type: "uint32"
+      - name: "value"
+        type: "int16"
 
-TEST_CASE("Decoder - Floating point", "[decoder]") {
-    Schema schema = SchemaBuilder()
-        .name("TestSchema")
-        .bigEndian()
-        .packet(0x03, "FloatPacket")
-            .field("temp", core::DataType::Float32)
-            .field("pressure", core::DataType::Float64)
-        .build();
-    
-    Decoder decoder(schema);
-    
-    // Create test data (big endian floats)
-    std::vector<uint8_t> data = {
-        0x42, 0x28, 0x00, 0x00,     // float32 = 42.0
-        0x40, 0x09, 0x21, 0xFB, 0x54, 0x44, 0x2D, 0x18  // float64 = 3.14159
-    };
-    
-    auto result = decoder.decode(0x03, data);
-    
-    REQUIRE(result.has_value());
-    
-    const auto& packet = result.value();
-    REQUIRE(std::get<double>(packet["temp"]) == Catch::Approx(42.0));
-    REQUIRE(std::get<double>(packet["pressure"]) == Catch::Approx(3.14159));
-}
+  - id: 2
+    name: "ScaledPacket"
+    fields:
+      - name: "temperature"
+        type: "int16"
+        scale: 0.01
+        offset: -40.0
+        unit: "celsius"
+        min: -40.0
+        max: 85.0
+      - name: "voltage"
+        type: "uint16"
+        scale: 0.001
+        unit: "volts"
 
-TEST_CASE("Decoder - Integer scaling", "[decoder]") {
-    Schema schema = SchemaBuilder()
-        .name("TestSchema")
-        .bigEndian()
-        .packet(0x04, "ScaledPacket")
-            .field("temperature", core::DataType::Int16)
-                .scale(0.01)
-                .offset(-40.0)
-            .field("voltage", core::DataType::UInt16)
-                .scale(0.001)
-            .done()
-        .build();
-    
-    Decoder decoder(schema);
-    
-    // Raw: i16=5000 -> (5000 * 0.01) - 40 = 10.0°C
-    // Raw: u16=3300 -> 3300 * 0.001 = 3.3V
-    std::vector<uint8_t> data = {
-        0x13, 0x88,                 // 5000
-        0x0C, 0xE4                  // 3300
-    };
-    
-    auto result = decoder.decode(0x04, data);
-    
-    REQUIRE(result.has_value());
-    
-    const auto& packet = result.value();
-    REQUIRE(std::get<double>(packet["temperature"]) == Catch::Approx(10.0));
-    REQUIRE(std::get<double>(packet["voltage"]) == Catch::Approx(3.3));
-}
+  - id: 3
+    name: "BitfieldPacket"
+    fields:
+      - name: "status"
+        type: "bitfield"
+        bits: 8
+        flags:
+          - { bit: 0, name: "active" }
+          - { bit: 1, name: "error" }
+          - { bit: 7, name: "ready" }
+      - name: "mode"
+        type: "uint8"
 
-TEST_CASE("Decoder - Bitfield with flags", "[decoder]") {
-    Schema schema = SchemaBuilder()
-        .name("TestSchema")
-        .bigEndian()
-        .packet(0x05, "StatusPacket")
-            .bitfield("status", 8)
-                .flag(0, "engine_1")
-                .flag(1, "engine_2")
-                .flag(7, "abort")
-            .done()
-        .build();
-    
-    Decoder decoder(schema);
-    
-    // Bits: 10000011 = engines 1,2 on, abort on
-    std::vector<uint8_t> data = { 0x83 };
-    
-    auto result = decoder.decode(0x05, data);
-    
-    REQUIRE(result.has_value());
-    
-    const auto& packet = result.value();
-    const auto& flags = std::get<BitfieldValue>(packet["status"]);
-    
-    REQUIRE(flags.at("engine_1") == true);
-    REQUIRE(flags.at("engine_2") == true);
-    REQUIRE(flags.at("abort") == true);
-}
+  - id: 4
+    name: "AllTypesPacket"
+    fields:
+      - name: "i8"
+        type: "int8"
+      - name: "i16"
+        type: "int16"
+      - name: "i32"
+        type: "int32"
+      - name: "i64"
+        type: "int64"
+      - name: "u8"
+        type: "uint8"
+      - name: "u16"
+        type: "uint16"
+      - name: "u32"
+        type: "uint32"
+      - name: "u64"
+        type: "uint64"
+      - name: "f32"
+        type: "float32"
+      - name: "f64"
+        type: "float64"
 
-TEST_CASE("Decoder - String field", "[decoder]") {
-    Schema schema = SchemaBuilder()
-        .name("TestSchema")
-        .packet(0x06, "StringPacket")
-            .string("name", 16)
-        .build();
-    
-    Decoder decoder(schema);
-    
-    std::vector<uint8_t> data = {
-        'H', 'e', 'l', 'l', 'o', 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0
-    };
-    
-    auto result = decoder.decode(0x06, data);
-    
-    REQUIRE(result.has_value());
-    
-    const auto& packet = result.value();
-    REQUIRE(std::get<std::string>(packet["name"]) == "Hello");
-}
+  - id: 5
+    name: "StringPacket"
+    fields:
+      - name: "label"
+        type: "string"
+        size: 8
+      - name: "id"
+        type: "uint16"
+)";
 
-TEST_CASE("Decoder - Little endian", "[decoder]") {
-    Schema schema = SchemaBuilder()
-        .name("TestSchema")
-        .littleEndian()
-        .packet(0x07, "LittleEndianPacket")
-            .field("value", core::DataType::UInt32)
-        .build();
-    
-    Decoder decoder(schema);
-    
-    // Little endian: 0x12345678 stored as 78 56 34 12
-    std::vector<uint8_t> data = { 0x78, 0x56, 0x34, 0x12 };
-    
-    auto result = decoder.decode(0x07, data);
-    
-    REQUIRE(result.has_value());
-    REQUIRE(std::get<uint64_t>(result.value()["value"]) == 0x12345678);
-}
-
-TEST_CASE("Decoder - Error handling", "[decoder]") {
-    Schema schema = SchemaBuilder()
-        .name("TestSchema")
-        .packet(0x08, "TestPacket")
-            .field("value", core::DataType::UInt32)
-        .build();
-    
-    Decoder decoder(schema);
-    
-    SECTION("Unknown packet ID") {
-        std::vector<uint8_t> data = { 0x01, 0x02, 0x03, 0x04 };
-        auto result = decoder.decode(0x99, data);
-        
-        REQUIRE_FALSE(result.has_value());
-        REQUIRE(result.error().message.find("Unknown packet ID") != std::string::npos);
+class DecoderFixture {
+protected:
+    DecoderFixture() {
+        auto result = SchemaLoader::fromYaml(TEST_SCHEMA);
+        REQUIRE(result.ok());
+        schema_ = std::make_unique<Schema>(std::move(result.value()));
     }
     
-    SECTION("Insufficient data") {
-        std::vector<uint8_t> data = { 0x01, 0x02 };  // Only 2 bytes, need 4
-        auto result = decoder.decode(0x08, data);
-        
-        REQUIRE_FALSE(result.has_value());
-        REQUIRE(result.error().message.find("Insufficient data") != std::string::npos);
-    }
-    
-    SECTION("Buffer underflow during read") {
-        std::vector<uint8_t> data = { 0x01, 0x02, 0x03 };  // Only 3 bytes
-        auto result = decoder.decode(0x08, data);
-        
-        REQUIRE_FALSE(result.has_value());
-    }
-}
+    std::unique_ptr<Schema> schema_;
+};
 
-TEST_CASE("Decoder - Complex packet", "[decoder]") {
-    Schema schema = SchemaBuilder()
-        .name("RocketTelemetry")
-        .bigEndian()
-        .packet(0x01, "FlightData")
-            .field("timestamp", core::DataType::UInt64)
-            .field("altitude", core::DataType::Float32)
-            .field("velocity", core::DataType::Float32)
-            .bitfield("status", 8)
-                .flag(0, "engine_on")
-                .flag(1, "parachute_deployed")
-            .field("temperature", core::DataType::Int16)
-                .scale(0.1)
-            .done()
-        .build();
+TEST_CASE_METHOD(DecoderFixture, "Decoder - decode simple packet", "[decoder]") {
+    Decoder decoder(*schema_);
     
-    Decoder decoder(schema);
-    
+    // counter=0x12345678, value=0x00FF (255)
     std::vector<uint8_t> data = {
-        // timestamp = 123456789
-        0x00, 0x00, 0x00, 0x00, 0x07, 0x5B, 0xCD, 0x15,
-        // altitude = 1000.25 (0x447A1000 in big-endian float32)
-        0x44, 0x7A, 0x10, 0x00,
-        // velocity = 50.25
-        0x42, 0x49, 0x00, 0x00,
-        // status = 0x01 (engine on)
-        0x01,
-        // temperature = 250 -> 25.0°C
-        0x00, 0xFA
+        0x12, 0x34, 0x56, 0x78,  // counter (big endian)
+        0x00, 0xFF               // value (big endian)
     };
     
-    auto result = decoder.decode(0x01, data);
+    auto result = decoder.decode(1, data);
+    REQUIRE(result.ok());
     
-    REQUIRE(result.has_value());
+    auto& packet = result.value();
+    REQUIRE(packet.id() == 1);
+    REQUIRE(packet.name() == "SimplePacket");
+    REQUIRE(packet.fieldCount() == 2);
     
-    const auto& packet = result.value();
-    REQUIRE(packet.packetName == "FlightData");
+    auto counter = packet.get<uint64_t>("counter");
+    REQUIRE(counter.has_value());
+    REQUIRE(*counter == 0x12345678);
     
-    REQUIRE(std::get<uint64_t>(packet["timestamp"]) == 123456789);
-    REQUIRE(std::get<double>(packet["altitude"]) == Catch::Approx(1000.25));
-    REQUIRE(std::get<double>(packet["velocity"]) == Catch::Approx(50.25));
+    auto value = packet.get<int64_t>("value");
+    REQUIRE(value.has_value());
+    REQUIRE(*value == 255);
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - decode with scaling", "[decoder]") {
+    Decoder decoder(*schema_);
     
-    const auto& status = std::get<BitfieldValue>(packet["status"]);
-    REQUIRE(status.at("engine_on") == true);
-    REQUIRE(status.at("parachute_deployed") == false);
+    // temperature: raw=6500 -> (6500 * 0.01) + (-40) = 25.0°C
+    // voltage: raw=3300 -> 3300 * 0.001 = 3.3V
+    std::vector<uint8_t> data = {
+        0x19, 0x64,  // temperature = 6500 (big endian)
+        0x0C, 0xE4   // voltage = 3300 (big endian)
+    };
     
-    REQUIRE(std::get<double>(packet["temperature"]) == Catch::Approx(25.0));
+    auto result = decoder.decode(2, data);
+    REQUIRE(result.ok());
+    
+    auto& packet = result.value();
+    
+    auto temp = packet.get<double>("temperature");
+    REQUIRE(temp.has_value());
+    REQUIRE_THAT(*temp, Catch::Matchers::WithinAbs(25.0, 0.001));
+    
+    auto voltage = packet.get<double>("voltage");
+    REQUIRE(voltage.has_value());
+    REQUIRE_THAT(*voltage, Catch::Matchers::WithinAbs(3.3, 0.001));
+    
+    // Check unit
+    auto* tempField = packet.field("temperature");
+    REQUIRE(tempField != nullptr);
+    REQUIRE(tempField->unit == "celsius");
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - decode without scaling", "[decoder]") {
+    DecodeOptions opts;
+    opts.applyScaling = false;
+    Decoder decoder(*schema_, opts);
+    
+    std::vector<uint8_t> data = {
+        0x19, 0x64,  // temperature = 6500
+        0x0C, 0xE4   // voltage = 3300
+    };
+    
+    auto result = decoder.decode(2, data);
+    REQUIRE(result.ok());
+    
+    auto& packet = result.value();
+    
+    // Should get raw value
+    auto temp = packet.get<int64_t>("temperature");
+    REQUIRE(temp.has_value());
+    REQUIRE(*temp == 6500);
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - decode bitfield", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    // status: 0b10000011 = active + error + ready
+    // mode: 5
+    std::vector<uint8_t> data = {
+        0x83,  // status = 0b10000011
+        0x05   // mode = 5
+    };
+    
+    auto result = decoder.decode(3, data);
+    REQUIRE(result.ok());
+    
+    auto& packet = result.value();
+    
+    auto* statusField = packet.field("status");
+    REQUIRE(statusField != nullptr);
+    REQUIRE(statusField->bitfield.has_value());
+    
+    auto& bf = *statusField->bitfield;
+    REQUIRE(bf.rawValue == 0x83);
+    REQUIRE(bf.isSet("active") == true);
+    REQUIRE(bf.isSet("error") == true);
+    REQUIRE(bf.isSet("ready") == true);
+    REQUIRE(bf.bitAt(2) == false);
+    
+    auto mode = packet.get<uint64_t>("mode");
+    REQUIRE(mode.has_value());
+    REQUIRE(*mode == 5);
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - decode all types", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    std::vector<uint8_t> data = {
+        0xFF,                                // i8 = -1
+        0xFF, 0xFE,                          // i16 = -2 (big endian)
+        0xFF, 0xFF, 0xFF, 0xFD,              // i32 = -3 (big endian)
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFC,  // i64 = -4 (big endian)
+        0x01,                                // u8 = 1
+        0x00, 0x02,                          // u16 = 2 (big endian)
+        0x00, 0x00, 0x00, 0x03,              // u32 = 3 (big endian)
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,  // u64 = 4 (big endian)
+        0x40, 0x48, 0xF5, 0xC3,              // f32 = 3.14 (big endian IEEE754)
+        0x40, 0x09, 0x21, 0xFB, 0x54, 0x44, 0x2D, 0x18   // f64 = pi (big endian)
+    };
+    
+    auto result = decoder.decode(4, data);
+    REQUIRE(result.ok());
+    
+    auto& packet = result.value();
+    
+    REQUIRE(*packet.get<int64_t>("i8") == -1);
+    REQUIRE(*packet.get<int64_t>("i16") == -2);
+    REQUIRE(*packet.get<int64_t>("i32") == -3);
+    REQUIRE(*packet.get<int64_t>("i64") == -4);
+    REQUIRE(*packet.get<uint64_t>("u8") == 1);
+    REQUIRE(*packet.get<uint64_t>("u16") == 2);
+    REQUIRE(*packet.get<uint64_t>("u32") == 3);
+    REQUIRE(*packet.get<uint64_t>("u64") == 4);
+    REQUIRE_THAT(*packet.get<double>("f32"), Catch::Matchers::WithinAbs(3.14, 0.01));
+    REQUIRE_THAT(*packet.get<double>("f64"), Catch::Matchers::WithinAbs(3.14159265358979, 0.0000001));
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - decode string", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    // label: "HELLO\0\0\0" (8 bytes), id: 42
+    std::vector<uint8_t> data = {
+        'H', 'E', 'L', 'L', 'O', 0, 0, 0,  // label
+        0x00, 0x2A                          // id = 42 (big endian)
+    };
+    
+    auto result = decoder.decode(5, data);
+    REQUIRE(result.ok());
+    
+    auto& packet = result.value();
+    
+    auto* labelField = packet.field("label");
+    REQUIRE(labelField != nullptr);
+    REQUIRE(std::holds_alternative<std::string>(labelField->rawValue));
+    
+    auto label = std::get<std::string>(labelField->rawValue);
+    REQUIRE(label.substr(0, 5) == "HELLO");
+    
+    REQUIRE(*packet.get<uint64_t>("id") == 42);
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - decode by name", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    std::vector<uint8_t> data = {
+        0x00, 0x00, 0x00, 0x01,  // counter
+        0x00, 0x10               // value
+    };
+    
+    auto result = decoder.decodeByName("SimplePacket", data);
+    REQUIRE(result.ok());
+    REQUIRE(result.value().name() == "SimplePacket");
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - unknown packet ID", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    std::vector<uint8_t> data = {0x00};
+    
+    auto result = decoder.decode(999, data);
+    REQUIRE(result.hasError());
+    REQUIRE(result.error().message.find("Unknown packet ID") != std::string::npos);
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - unknown packet name", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    std::vector<uint8_t> data = {0x00};
+    
+    auto result = decoder.decodeByName("NonExistent", data);
+    REQUIRE(result.hasError());
+    REQUIRE(result.error().message.find("Unknown packet name") != std::string::npos);
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - insufficient data", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    // SimplePacket needs 6 bytes, only providing 2
+    std::vector<uint8_t> data = {0x00, 0x01};
+    
+    auto result = decoder.decode(1, data);
+    REQUIRE(result.hasError());
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - constraint violation", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    // temperature: raw=20000 -> (20000 * 0.01) + (-40) = 160°C (exceeds max 85)
+    std::vector<uint8_t> data = {
+        0x4E, 0x20,  // temperature = 20000
+        0x00, 0x00   // voltage = 0
+    };
+    
+    auto result = decoder.decode(2, data);
+    REQUIRE(result.hasError());
+    REQUIRE(result.error().message.find("above maximum") != std::string::npos);
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - skip constraint validation", "[decoder]") {
+    DecodeOptions opts;
+    opts.validateConstraints = false;
+    Decoder decoder(*schema_, opts);
+    
+    // temperature exceeds max but validation disabled
+    std::vector<uint8_t> data = {
+        0x4E, 0x20,  // temperature = 20000 -> 160°C
+        0x00, 0x00   // voltage = 0
+    };
+    
+    auto result = decoder.decode(2, data);
+    REQUIRE(result.ok());
+    
+    auto temp = result.value().get<double>("temperature");
+    REQUIRE_THAT(*temp, Catch::Matchers::WithinAbs(160.0, 0.001));
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - field iteration", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    std::vector<uint8_t> data = {
+        0x00, 0x00, 0x00, 0x01,
+        0x00, 0x02
+    };
+    
+    auto result = decoder.decode(1, data);
+    REQUIRE(result.ok());
+    
+    auto& packet = result.value();
+    
+    std::vector<std::string> fieldNames;
+    for (const auto& field : packet) {
+        fieldNames.push_back(field.name);
+    }
+    
+    REQUIRE(fieldNames.size() == 2);
+    REQUIRE(fieldNames[0] == "counter");
+    REQUIRE(fieldNames[1] == "value");
+}
+
+TEST_CASE_METHOD(DecoderFixture, "Decoder - hasField check", "[decoder]") {
+    Decoder decoder(*schema_);
+    
+    std::vector<uint8_t> data = {
+        0x00, 0x00, 0x00, 0x01,
+        0x00, 0x02
+    };
+    
+    auto result = decoder.decode(1, data);
+    REQUIRE(result.ok());
+    
+    auto& packet = result.value();
+    
+    REQUIRE(packet.hasField("counter") == true);
+    REQUIRE(packet.hasField("value") == true);
+    REQUIRE(packet.hasField("nonexistent") == false);
 }

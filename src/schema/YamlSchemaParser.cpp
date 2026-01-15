@@ -1,4 +1,4 @@
-#include "ionet/schema/SchemaParser.h"
+#include "../../include/ionet/schema/SchemaParser.h"
 #include <yaml-cpp/yaml.h>
 
 namespace ionet::schema {

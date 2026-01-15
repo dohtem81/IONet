@@ -1,4 +1,4 @@
-#include "ionet/schema/SchemaParser.h"
+#include "../../include/ionet/schema/SchemaParser.h"
 #include <stdexcept>
 
 namespace ionet::schema {
@@ -16,7 +16,6 @@ core::DataType SchemaParserBase::parseDataType(const std::string& typeStr) {
     if (typeStr == "float64")  return core::DataType::Float64;
     if (typeStr == "bitfield") return core::DataType::Bitfield;
     if (typeStr == "string")   return core::DataType::String;
-    if (typeStr == "bytes")    return core::DataType::Bytes;
     
     throw std::runtime_error("Unknown data type: " + typeStr);
 }

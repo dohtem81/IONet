@@ -1,61 +1,89 @@
-#ifndef IONET_BYTEBUFFER_H
-#define IONET_BYTEBUFFER_H
+#ifndef IONET_CORE_BYTE_BUFFER_H
+#define IONET_CORE_BYTE_BUFFER_H
 
 #include "Types.h"
 #include "Endian.h"
-#include <span>
-#include <stdexcept>
+#include <vector>
+#include <cstdint>
 #include <cstring>
+#include <string>
+#include <stdexcept>
 
 namespace ionet::core {
 
-class ByteBuffer {
+/// Writer for building binary buffers
+class ByteBufferWriter {
 public:
-    // Non-owning view of data
-    explicit ByteBuffer(std::span<const uint8_t> data, ByteOrder order = ByteOrder::Big)
-        : data_(data), order_(order), position_(0) {}
+    ByteBufferWriter() = default;
+    explicit ByteBufferWriter(std::size_t reserveSize);
 
-    // Read with automatic endian conversion
-    template<typename T>
-    T read() {
-        if (position_ + sizeof(T) > data_.size()) {
-            throw std::out_of_range("Buffer underflow");
-        }
-        
-        T value;
-        std::memcpy(&value, data_.data() + position_, sizeof(T));
-        position_ += sizeof(T);
-        lastOpWasByteRead_ = true;
-        
-        return endian::convert<T>(value, order_);
-    }
+    // Write methods
+    void writeInt8(int8_t value);
+    void writeInt16(int16_t value, ByteOrder order = ByteOrder::Native);
+    void writeInt32(int32_t value, ByteOrder order = ByteOrder::Native);
+    void writeInt64(int64_t value, ByteOrder order = ByteOrder::Native);
 
-    // Read raw bytes
-    std::span<const uint8_t> readBytes(std::size_t count) {
-        if (position_ + count > data_.size()) {
-            throw std::out_of_range("Buffer underflow");
-        }
-        auto result = data_.subspan(position_, count);
-        position_ += count;
-        lastOpWasByteRead_ = true;
-        return result;
-    }
+    void writeUInt8(uint8_t value);
+    void writeUInt16(uint16_t value, ByteOrder order = ByteOrder::Native);
+    void writeUInt32(uint32_t value, ByteOrder order = ByteOrder::Native);
+    void writeUInt64(uint64_t value, ByteOrder order = ByteOrder::Native);
 
-    // Read bits from current byte
-    uint64_t readBits(std::size_t bitCount);
+    void writeFloat32(float value, ByteOrder order = ByteOrder::Native);
+    void writeFloat64(double value, ByteOrder order = ByteOrder::Native);
 
-    std::size_t position() const { return position_; }
-    std::size_t remaining() const { return data_.size() - position_; }
-    void seek(std::size_t pos) { position_ = pos; }
+    void writeBytes(const uint8_t* data, std::size_t size);
+    void writeBytes(const std::vector<uint8_t>& data);
+    void writeString(const std::string& str, std::size_t fixedSize = 0);
+
+    // Access
+    const std::vector<uint8_t>& data() const { return buffer_; }
+    std::vector<uint8_t> take() { return std::move(buffer_); }
+    std::size_t size() const { return buffer_.size(); }
+    void clear() { buffer_.clear(); }
 
 private:
-    std::span<const uint8_t> data_;
-    ByteOrder order_;
-    std::size_t position_;
-    
-    // For bit-level reading
-    std::size_t bitPosition_ = 0;
-    bool lastOpWasByteRead_ = false;
+    std::vector<uint8_t> buffer_;
+};
+
+/// Reader for parsing binary buffers
+class ByteBufferReader {
+public:
+    ByteBufferReader(const uint8_t* data, std::size_t size);
+    explicit ByteBufferReader(const std::vector<uint8_t>& data);
+
+    // Read methods
+    int8_t readInt8();
+    int16_t readInt16(ByteOrder order = ByteOrder::Native);
+    int32_t readInt32(ByteOrder order = ByteOrder::Native);
+    int64_t readInt64(ByteOrder order = ByteOrder::Native);
+
+    uint8_t readUInt8();
+    uint16_t readUInt16(ByteOrder order = ByteOrder::Native);
+    uint32_t readUInt32(ByteOrder order = ByteOrder::Native);
+    uint64_t readUInt64(ByteOrder order = ByteOrder::Native);
+
+    float readFloat32(ByteOrder order = ByteOrder::Native);
+    double readFloat64(ByteOrder order = ByteOrder::Native);
+
+    std::vector<uint8_t> readBytes(std::size_t count);
+    std::string readString(std::size_t size);
+
+    // Position control
+    std::size_t position() const { return pos_; }
+    std::size_t remaining() const { return size_ - pos_; }
+    std::size_t size() const { return size_; }
+    bool atEnd() const { return pos_ >= size_; }
+
+    void seek(std::size_t pos);
+    void skip(std::size_t count);
+    void reset() { pos_ = 0; }
+
+private:
+    const uint8_t* data_;
+    std::size_t size_;
+    std::size_t pos_ = 0;
+
+    void checkRemaining(std::size_t needed) const;
 };
 
 } // namespace ionet::core

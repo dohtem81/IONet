@@ -1,57 +1,51 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 #include <ionet/core/ByteBuffer.h>
 
 using namespace ionet::core;
 
-// TEST_CASE("ByteBufferReader - read integers big endian", "[bytebuffer]") {
-//     std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
-//     ByteBufferReader reader(data, ByteOrder::Big);
-    
-//     auto val16 = reader.read<uint16_t>();
-//     REQUIRE(val16.ok());
-//     REQUIRE(val16.value() == 0x0102);
-// }
+TEST_CASE("ByteBufferReader - read integers big endian", "[bytebuffer]") {
+    std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+    ByteBufferReader reader(data);
 
-// TEST_CASE("ByteBufferReader - buffer underflow", "[bytebuffer]") {
-//     std::vector<uint8_t> data = {0x01, 0x02};
-//     ByteBufferReader reader(data, ByteOrder::Big);
-    
-//     auto result = reader.read<uint32_t>();
-//     REQUIRE(result.hasError());
-// }
+    auto val16 = reader.readUInt16(ByteOrder::Big);
+    REQUIRE(val16 == 0x0102);
+}
 
-// TEST_CASE("ByteBufferWriter - write integers", "[bytebuffer]") {
-//     ByteBufferWriter writer(ByteOrder::Big);
-    
-//     writer.write<uint16_t>(0x0102);
-    
-//     auto data = writer.data();
-//     REQUIRE(data.size() == 2);
-//     REQUIRE(data[0] == 0x01);
-//     REQUIRE(data[1] == 0x02);
-// }
+TEST_CASE("ByteBufferReader - buffer underflow", "[bytebuffer]") {
+    std::vector<uint8_t> data = {0x01, 0x02};
+    ByteBufferReader reader(data);
 
-// TEST_CASE("Round trip read/write", "[bytebuffer]") {
-//     ByteBufferWriter writer(ByteOrder::Big);
-//     writer.write<float>(3.14159f);
-//     writer.write<int32_t>(-42);
-    
-//     ByteBufferReader reader(writer.data(), ByteOrder::Big);
-    
-//     REQUIRE(reader.read<float>().value() == 3.14159f);
-//     REQUIRE(reader.read<int32_t>().value() == -42);
-// }
+    // Try to read 4 bytes as uint32_t, should throw
+    try {
+        reader.readUInt32(ByteOrder::Big);
+        FAIL("Expected exception not thrown");
+    } catch (const std::exception&) {
+        SUCCEED();
+    }
+}
 
-TEST_CASE("ByteBuffer - read bits", "[bytebuffer]") {
-    std::vector<uint8_t> data = {0b10101010, 0b11001100}; // 0xAA, 0xCC
-    ByteBuffer buffer(data, ByteOrder::Big);
-    
-    uint64_t bits = buffer.readBits(4); // Read first 4 bits: 1010
-    REQUIRE(bits == 0b1010);
-    
-    bits = buffer.readBits(4); // Read next 4 bits: 1010
-    REQUIRE(bits == 0b1010);
-    
-    bits = buffer.readBits(8); // Read next 8 bits: 11001100
-    REQUIRE(bits == 0b11001100);
+TEST_CASE("ByteBufferWriter - write integers", "[bytebuffer]") {
+    ByteBufferWriter writer;
+
+    writer.writeUInt16(0x0102, ByteOrder::Big);
+
+    auto data = writer.data();
+    REQUIRE(data.size() == 2);
+    REQUIRE(data[0] == 0x01);
+    REQUIRE(data[1] == 0x02);
+}
+
+TEST_CASE("Round trip read/write", "[bytebuffer]") {
+    ByteBufferWriter writer;
+    writer.writeFloat32(3.14159f, ByteOrder::Big);
+    writer.writeInt32(-42, ByteOrder::Big);
+
+    ByteBufferReader reader(writer.data());
+
+    float f = reader.readFloat32(ByteOrder::Big);
+    int32_t i = reader.readInt32(ByteOrder::Big);
+
+    REQUIRE(f == Catch::Approx(3.14159f));
+    REQUIRE(i == -42);
 }

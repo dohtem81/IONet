@@ -17,10 +17,8 @@ add_executable(ionet_tests
 
 target_link_libraries(ionet_tests PRIVATE ionet Catch2::Catch2WithMain)
 
-if(IONET_COVERAGE)
-    target_compile_options(ionet_tests PRIVATE --coverage -fprofile-arcs -ftest-coverage)
-    target_link_options(ionet_tests PRIVATE --coverage)
-endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 
 include(Catch)
 catch_discover_tests(ionet_tests)

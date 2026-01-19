@@ -129,9 +129,11 @@ Check [schemas/example_telemetry.yaml](schemas/example_telemetry.yaml) for a com
 
 ## Project Status
 
+
 ### Implemented
 - Schema loading from YAML and JSON
 - Core decoding functionality (Decoder, DecodedPacket)
+- Encoder (binary serialization from structured data)
 - ByteBufferReader/Writer with endian support
 - Bitfield and scaling support
 - Type-safe field access
@@ -139,9 +141,11 @@ Check [schemas/example_telemetry.yaml](schemas/example_telemetry.yaml) for a com
 - Comprehensive unit tests
 
 ### In Progress
-- Encoder (binary serialization from structured data)
 - Advanced bitfield manipulation
 - Schema validation improvements
+
+**MVP Complete:**
+All core features described in the README are implemented and tested, including schema loading, decoding, encoding, bitfield/scaling support, constraint validation, and unit tests. The library is ready for use in schema-driven binary protocol projects.
 
 ### Planned
 - Schema versioning and migration tools

@@ -13,24 +13,21 @@ void ByteBufferWriter::writeInt8(int8_t value) {
 }
 
 void ByteBufferWriter::writeInt16(int16_t value, ByteOrder order) {
-    uint16_t ordered = endian::convert(static_cast<uint16_t>(value), order);
-    buffer_.push_back(static_cast<uint8_t>(ordered >> 8));
-    buffer_.push_back(static_cast<uint8_t>(ordered & 0xFF));
+    int16_t ordered = endian::convert(value, order);
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&ordered);
+    buffer_.insert(buffer_.end(), bytes, bytes + sizeof(ordered));
 }
 
 void ByteBufferWriter::writeInt32(int32_t value, ByteOrder order) {
-    uint32_t ordered = endian::convert(static_cast<uint32_t>(value), order);
-    buffer_.push_back(static_cast<uint8_t>(ordered >> 24));
-    buffer_.push_back(static_cast<uint8_t>(ordered >> 16));
-    buffer_.push_back(static_cast<uint8_t>(ordered >> 8));
-    buffer_.push_back(static_cast<uint8_t>(ordered & 0xFF));
+    int32_t ordered = endian::convert(value, order);
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&ordered);
+    buffer_.insert(buffer_.end(), bytes, bytes + sizeof(ordered));
 }
 
 void ByteBufferWriter::writeInt64(int64_t value, ByteOrder order) {
-    uint64_t ordered = endian::convert(static_cast<uint64_t>(value), order);
-    for (int i = 7; i >= 0; --i) {
-        buffer_.push_back(static_cast<uint8_t>(ordered >> (i * 8)));
-    }
+    int64_t ordered = endian::convert(value, order);
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&ordered);
+    buffer_.insert(buffer_.end(), bytes, bytes + sizeof(ordered));
 }
 
 void ByteBufferWriter::writeUInt8(uint8_t value) {
@@ -39,23 +36,20 @@ void ByteBufferWriter::writeUInt8(uint8_t value) {
 
 void ByteBufferWriter::writeUInt16(uint16_t value, ByteOrder order) {
     uint16_t ordered = endian::convert(value, order);
-    buffer_.push_back(static_cast<uint8_t>(ordered >> 8));
-    buffer_.push_back(static_cast<uint8_t>(ordered & 0xFF));
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&ordered);
+    buffer_.insert(buffer_.end(), bytes, bytes + sizeof(ordered));
 }
 
 void ByteBufferWriter::writeUInt32(uint32_t value, ByteOrder order) {
     uint32_t ordered = endian::convert(value, order);
-    buffer_.push_back(static_cast<uint8_t>(ordered >> 24));
-    buffer_.push_back(static_cast<uint8_t>(ordered >> 16));
-    buffer_.push_back(static_cast<uint8_t>(ordered >> 8));
-    buffer_.push_back(static_cast<uint8_t>(ordered & 0xFF));
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&ordered);
+    buffer_.insert(buffer_.end(), bytes, bytes + sizeof(ordered));
 }
 
 void ByteBufferWriter::writeUInt64(uint64_t value, ByteOrder order) {
     uint64_t ordered = endian::convert(value, order);
-    for (int i = 7; i >= 0; --i) {
-        buffer_.push_back(static_cast<uint8_t>(ordered >> (i * 8)));
-    }
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&ordered);
+    buffer_.insert(buffer_.end(), bytes, bytes + sizeof(ordered));
 }
 
 void ByteBufferWriter::writeFloat32(float value, ByteOrder order) {
@@ -114,30 +108,26 @@ int8_t ByteBufferReader::readInt8() {
 
 int16_t ByteBufferReader::readInt16(ByteOrder order) {
     checkRemaining(2);
-    uint16_t value = (static_cast<uint16_t>(data_[pos_]) << 8) |
-                      static_cast<uint16_t>(data_[pos_ + 1]);
+    int16_t value;
+    std::memcpy(&value, data_ + pos_, sizeof(value));
     pos_ += 2;
-    return static_cast<int16_t>(endian::convert(value, order));
+    return endian::convert(value, order);
 }
 
 int32_t ByteBufferReader::readInt32(ByteOrder order) {
     checkRemaining(4);
-    uint32_t value = (static_cast<uint32_t>(data_[pos_]) << 24) |
-                     (static_cast<uint32_t>(data_[pos_ + 1]) << 16) |
-                     (static_cast<uint32_t>(data_[pos_ + 2]) << 8) |
-                      static_cast<uint32_t>(data_[pos_ + 3]);
+    int32_t value;
+    std::memcpy(&value, data_ + pos_, sizeof(value));
     pos_ += 4;
-    return static_cast<int32_t>(endian::convert(value, order));
+    return endian::convert(value, order);
 }
 
 int64_t ByteBufferReader::readInt64(ByteOrder order) {
     checkRemaining(8);
-    uint64_t value = 0;
-    for (int i = 0; i < 8; ++i) {
-        value = (value << 8) | static_cast<uint64_t>(data_[pos_ + i]);
-    }
+    int64_t value;
+    std::memcpy(&value, data_ + pos_, sizeof(value));
     pos_ += 8;
-    return static_cast<int64_t>(endian::convert(value, order));
+    return endian::convert(value, order);
 }
 
 uint8_t ByteBufferReader::readUInt8() {
@@ -147,28 +137,24 @@ uint8_t ByteBufferReader::readUInt8() {
 
 uint16_t ByteBufferReader::readUInt16(ByteOrder order) {
     checkRemaining(2);
-    uint16_t value = (static_cast<uint16_t>(data_[pos_]) << 8) |
-                      static_cast<uint16_t>(data_[pos_ + 1]);
+    uint16_t value;
+    std::memcpy(&value, data_ + pos_, sizeof(value));
     pos_ += 2;
     return endian::convert(value, order);
 }
 
 uint32_t ByteBufferReader::readUInt32(ByteOrder order) {
     checkRemaining(4);
-    uint32_t value = (static_cast<uint32_t>(data_[pos_]) << 24) |
-                     (static_cast<uint32_t>(data_[pos_ + 1]) << 16) |
-                     (static_cast<uint32_t>(data_[pos_ + 2]) << 8) |
-                      static_cast<uint32_t>(data_[pos_ + 3]);
+    uint32_t value;
+    std::memcpy(&value, data_ + pos_, sizeof(value));
     pos_ += 4;
     return endian::convert(value, order);
 }
 
 uint64_t ByteBufferReader::readUInt64(ByteOrder order) {
     checkRemaining(8);
-    uint64_t value = 0;
-    for (int i = 0; i < 8; ++i) {
-        value = (value << 8) | static_cast<uint64_t>(data_[pos_ + i]);
-    }
+    uint64_t value;
+    std::memcpy(&value, data_ + pos_, sizeof(value));
     pos_ += 8;
     return endian::convert(value, order);
 }

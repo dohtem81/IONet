@@ -82,6 +82,14 @@ packets:
         size: 8
       - name: "id"
         type: "uint16"
+
+  - id: 6
+    name: "NotScaledPacket"
+    fields:
+      - name: "temperature"
+        type: "int16"
+      - name: "voltage"
+        type: "uint16"       
 )";
 
 class DecoderFixture {
@@ -160,7 +168,7 @@ TEST_CASE_METHOD(DecoderFixture, "Decoder - decode without scaling", "[decoder]"
         0x0C, 0xE4   // voltage = 3300
     };
     
-    auto result = decoder.decode(2, data);
+    auto result = decoder.decode(6, data);
     REQUIRE(result.ok());
     
     auto& packet = result.value();

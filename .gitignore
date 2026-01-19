@@ -89,9 +89,7 @@ docs/latex/
 *.bak
 *.log
 *.tlog
-
 # Core dumps
-core
 core.*
 
 # Python (if you add any scripts)

@@ -168,6 +168,43 @@ IONet/
 └── docker/
 ```
 
+## Installing the Library
+
+To install the IONet library system-wide (for use in other CMake projects):
+
+```bash
+cmake --build build --target install
+```
+
+By default, this installs headers and libraries to your system or CMAKE_INSTALL_PREFIX. You can set a custom prefix:
+
+```bash
+cmake -B build -DCMAKE_INSTALL_PREFIX=/your/install/path
+cmake --build build --target install
+```
+
+## Using IONet in Your Project (CMake)
+
+After installing, you can use IONet from another CMake project:
+
+```cmake
+find_package(ionet REQUIRED)
+
+add_executable(my_app main.cpp)
+target_link_libraries(my_app PRIVATE ionet::ionet)
+```
+
+IONet will automatically provide include directories and link dependencies (yaml-cpp, nlohmann_json) via CMake.
+
+## Building as a Shared or Static Library
+
+By default, IONet builds as a shared library. To build as static:
+
+```bash
+cmake -B build -DIONET_BUILD_SHARED=OFF
+cmake --build build
+```
+
 ## Background
 
 This project is a C++ implementation of an idea I first developed years ago in C++ - a system where all TCP communication is defined in configuration files. The actual application code doesn't need to know anything about the underlying message format; it simply accesses ready-to-use structured data.

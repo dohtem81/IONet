@@ -47,9 +47,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Schema loaded successfully from " << schema_path << std::endl;
 
     }
-    const auto& schema = schema_result.value();
-    std::cout << "Loaded schema: " << schema.info().name << " v" << schema.info().version << std::endl;
-
+    
     // IPv4 only: resolve address
     struct sockaddr_in server_addr;
     std::memset(&server_addr, 0, sizeof(server_addr));
@@ -75,21 +73,31 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+
+    std::unique_ptr<ionet::schema::Schema> schema_ = std::make_unique<ionet::schema::Schema>(std::move(schema_result.value()));
+    std::cout << "Loaded schema: " << schema_->info().name 
+        << " v" << schema_->info().version << std::endl;
+
     uint16_t message_id = ntohs(server_addr.sin_port); // Using port as message ID
     uint64_t latest_timestamp = static_cast<uint64_t>(time(nullptr)) * 1000; // Current time in milliseconds
-    // update timestamp in schemas id message_id
-    ionet::codec::Encoder encoder(*schema);
 
-    ionet::schema::Packet packet = schema->findPacketById(message_id) ? 
-                    ionet::core::Packet(message_id, schema->findPacketById(message_id)->name) :
-                    ionet::core::Packet(message_id, "UnknownPacket");
+    // update timestamp in schemas id message_id
+    //ionet::codec::Encoder encoder(*schema_);
+
+    ionet::schema::Packet packet = schema_->findPacketById(message_id) ? 
+                    ionet::schema::Packet(message_id, schema_->findPacketById(message_id)->name) :
+                    ionet::schema::Packet(message_id, "UnknownPacket");
+
+    ionet::schema::Packet packet2(2, "ScaledPacket");
+    packet2.set("temperature", 25.0); // Will be scaled to raw
+    packet2.set("voltage", 3.3);
 
     if (packet.id == message_id) {
         std::cout << "Found packet definition: " << packet.name << std::endl;
         packet.set("timestamp", latest_timestamp);
-        packet.set("process_id", static_cast<int16_t>(getpid()));
-        packet.set("status", static_cast<uint8_t>(0)); // OK status
-        auto result = encoder.encode(packet);
+        // packet.set("process_id", static_cast<int16_t>(getpid()));
+        // packet.set("status", static_cast<uint8_t>(0)); // OK status
+        //auto result = encoder.encode(packet);
     } else {
         std::cout << "Packet definition not found for ID: " << message_id << std::endl;
     }

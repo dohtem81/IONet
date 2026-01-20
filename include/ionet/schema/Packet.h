@@ -6,6 +6,7 @@
 #include <string>
 #include <optional>
 #include <algorithm>
+#include <yaml-cpp/yaml.h>
 
 namespace ionet::schema {
 
@@ -47,6 +48,14 @@ struct Packet {
         }
         return -1;
     }
+
+    template<typename T>
+    void set(const std::string& field, const T& value) {
+        // Store in an internal YAML::Node or std::map
+        data_[field] = value;
+    }
+private:
+    YAML::Node data_; // or std::map<std::string, YAML::Node>      
 };
 
 } // namespace ionet::schema

@@ -21,11 +21,13 @@ Encoder::Encoder(const schema::Schema& schema, EncodeOptions opts)
 
 Encoder::~Encoder() = default;
 
-ionet::core::Result<std::vector<uint8_t>> Encoder::encode(const ionet::core::Packet& packet) const {
+ionet::core::Result<std::vector<uint8_t>> Encoder::encode(const ionet::schema::Packet& packet) const {
     // Find packet definition in schema
-    const auto* pktDef = impl_->schema.packetById(packet.id());
+    const auto* pktDef = impl_->schema.findPacketById(packet.id);
     if (!pktDef) {
-        return ionet::core::Result<std::vector<uint8_t>>::error("Unknown packet ID: " + std::to_string(packet.id()));
+        return ionet::core::Result<std::vector<uint8_t>>::error(
+            ionet::core::Result<std::vector<uint8_t>>::ErrorType{"Unknown packet ID: " + std::to_string(packet.id)}
+        );
     }
 
     std::vector<uint8_t> buffer;

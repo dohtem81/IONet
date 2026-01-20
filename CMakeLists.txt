@@ -46,6 +46,7 @@ set(IONET_SOURCES
     src/schema/SchemaLoader.cpp
     src/codec/DecodedPacket.cpp
     src/codec/Decoder.cpp
+    src/codec/Encoder.cpp
 )
 
 if(IONET_BUILD_SHARED)

@@ -1,0 +1,42 @@
+schema:
+  name: "ProcessHeartbeats"
+  version: "1.0"
+  byte_order: "big"
+
+packets:
+  - id: 1001
+    name: "HeartbeatProcessA"
+    description: "Heartbeat packet for Process A"
+    fields:
+      - name: "timestamp"
+        type: "uint64"
+        unit: "milliseconds"
+        description: "Epoch time in milliseconds"
+      - name: "process_id"
+        type: "uint32"
+        description: "Unique process identifier"
+      - name: "status"
+        type: "enum"
+        description: "Current status of the process"
+        options:
+          - { name: "OK", value: 0 }
+          - { name: "WARNING", value: 1 }
+          - { name: "ERROR", value: 2 }
+  - id: 1002
+    name: "HeartbeatProcessB"
+    description: "Heartbeat packet for Process B"
+    fields:
+      - name: "timestamp"
+        type: "uint64"
+        unit: "milliseconds"
+        description: "Epoch time in milliseconds"
+      - name: "process_id"
+        type: "uint32"
+        description: "Unique process identifier"
+      - name: "status"
+        type: "enum"
+        description: "Current status of the process"
+        options:
+          - { name: "OK", value: 0 }
+          - { name: "WARNING", value: 1 }
+          - { name: "ERROR", value: 2 }

@@ -1,0 +1,54 @@
+version: '3.8'
+services:
+  dev:
+    build: .
+    container_name: ${PROJECT_NAME:-dev}_dev
+    command: ["/bin/bash"]
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - PORT_A=${PORT_A}
+      - PORT_B=${PORT_B}
+      - PROCESS_A=${PROCESS_A}
+      - PROCESS_B=${PROCESS_B}
+    tty: true
+
+  build:
+    build: .
+    container_name: ${PROJECT_NAME:-dev}_build
+    command: ["/bin/bash", "-c", "cmake -B build && cmake --build build"]
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - PORT_A=${PORT_A}
+      - PORT_B=${PORT_B}
+      - PROCESS_A=${PROCESS_A}
+      - PROCESS_B=${PROCESS_B}
+  process_a:
+    build: .
+    container_name: ${PROCESS_A}
+    command: ["/app/heartbeat_a"]
+    ports:
+      - "${PORT_A}:${PORT_A}"
+    environment:
+      - PORT_A=${PORT_A}
+      - PORT_B=${PORT_B}
+      - PROCESS_A=${PROCESS_A}
+      - PROCESS_B=${PROCESS_B}
+    volumes:
+      - ./config:/app/config:ro
+  process_b:
+    build: .
+    container_name: ${PROCESS_B}
+    command: ["/app/heartbeat_b"]
+    ports:
+      - "${PORT_B}:${PORT_B}"
+    environment:
+      - PORT_A=${PORT_A}
+      - PORT_B=${PORT_B}
+      - PROCESS_A=${PROCESS_A}
+      - PROCESS_B=${PROCESS_B}
+    volumes:
+      - ./config:/app/config:ro

@@ -1,5 +1,5 @@
 #include <iostream>
-#include <ionet/schema/SchemaLoader.h>
+#include <../../include/ionet/schema/SchemaLoader.h>
 
 int main() {
     // Load heartbeat schema definition

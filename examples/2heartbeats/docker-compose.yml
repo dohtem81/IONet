@@ -29,7 +29,7 @@ services:
   process_a:
     build: .
     container_name: ${PROCESS_A}
-    command: ["/app/heartbeat_a"]
+    command: ["/app/2heartbeats"]
     ports:
       - "${PORT_A}:${PORT_A}"
     environment:
@@ -42,7 +42,7 @@ services:
   process_b:
     build: .
     container_name: ${PROCESS_B}
-    command: ["/app/heartbeat_b"]
+    command: ["/app/2heartbeats"]
     ports:
       - "${PORT_B}:${PORT_B}"
     environment:

@@ -59,7 +59,7 @@ target_include_directories(ionet PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(ionet PUBLIC
+target_link_libraries(ionet PRIVATE
     yaml-cpp::yaml-cpp
     nlohmann_json::nlohmann_json
 )
@@ -111,3 +111,6 @@ if(IONET_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# Add 2heartbeats example
+add_subdirectory(examples/2heartbeats)

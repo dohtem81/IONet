@@ -13,8 +13,16 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /ionet
 
-COPY . /app
+# Copy the entire IONet project into the container
+COPY ../../ .
 
-CMD ["sleep", "infinity"]
+# Build all targets (including ionet and 2heartbeats)
+RUN cmake -B build
+RUN cmake --build build
+
+# Copy the 2heartbeats binary to a convenient location
+RUN cp build/examples/2heartbeats/2heartbeats /ionet/2heartbeats
+
+CMD ["/ionet/2heartbeats"]

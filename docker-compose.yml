@@ -20,6 +20,10 @@ services:
       target: build
     image: ionet-build:latest
     container_name: ionet-build
+    volumes:
+      - .:/workspace
+    working_dir: /workspace  
+    command: sh -c "cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CACHEFILE_DIR=/workspace/.cache && cmake --build build --config Release -- -j$(nproc)"  
 
   # Run tests
   test:

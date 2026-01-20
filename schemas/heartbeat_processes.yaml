@@ -16,7 +16,7 @@ packets:
         type: "uint32"
         description: "Unique process identifier"
       - name: "status"
-        type: "enum"
+        type: "uint8"
         description: "Current status of the process"
         options:
           - { name: "OK", value: 0 }
@@ -34,7 +34,7 @@ packets:
         type: "uint32"
         description: "Unique process identifier"
       - name: "status"
-        type: "enum"
+        type: "uint8"
         description: "Current status of the process"
         options:
           - { name: "OK", value: 0 }

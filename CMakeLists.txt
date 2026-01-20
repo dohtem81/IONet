@@ -77,7 +77,7 @@ install(TARGETS ionet
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-install(DIRECTORY include/ionet DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(EXPORT ionetTargets
     FILE ionetTargets.cmake
@@ -112,5 +112,5 @@ if(IONET_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-# Add 2heartbeats example
-add_subdirectory(examples/2heartbeats)
+# examples
+add_subdirectory(examples)

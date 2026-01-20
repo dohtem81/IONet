@@ -9,7 +9,7 @@
 #include <unistd.h>     // For close
 #include "../../include/ionet/schema/SchemaLoader.h"
 #include "../../include/ionet/codec/Encoder.h"
-#include "../../include/ionet/codec/Packet.h"
+#include "../../include/ionet/schema/Packet.h"
 #include <thread>
 
 void print_usage(const char* progname) {
@@ -61,50 +61,41 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Heartbeat logic in a background thread
-    auto heartbeat_thread = std::thread([&server_addr]() {
-        // Create socket (not connecting yet)
-        int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) {
-            std::cerr << "[thread] Failed to create socket" << std::endl;
-            return;
-        }
-        
-        // Connect to the server
-        if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-            std::cerr << "[thread] Failed to connect to server" << std::endl;
-            close(sockfd);
-            return;
-        }
-        
-        uint16_t message_id = ntohs(server_addr.sin_port); // Using port as message ID
-        uint64_t latest_timestamp = static_cast<uint64_t>(time(nullptr)) * 1000; // Current time in milliseconds
-        // update timestamp in schemas id message_id
-        Encoder encoder(*schema_result);
-        
-        Packet packet = schema_result->findPacketById(message_id) ? 
-                        Packet(message_id, schema_result->findPacketById(message_id)->name) :
-                        Packet(message_id, "UnknownPacket");
-        
-        if (packet.id == message_id) {
-            std::cout << "[thread] Found packet definition: " << packet.name << std::endl;
-            packet.set("timestamp", latest_timestamp);
-            packet.set("process_id", static_cast<int16_t>(getpid()));
-            packet.set("status", static_cast<uint8_t>(0)); // OK status
-            auto result = encoder.encode(packet);
-        } else {
-            std::cout << "[thread] Packet definition not found for ID: " << message_id << std::endl;
-        }
+    // Heartbeat logic runs directly in main
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        std::cerr << "Failed to create socket" << std::endl;
+        return 1;
+    }
 
+    // Connect to the server
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        std::cerr << "Failed to connect to server" << std::endl;
         close(sockfd);
-        std::cout << "[thread] Socket created and closed successfully." << std::endl;
+        return 1;
+    }
 
-        // sleep 1000ms
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    });
+    uint16_t message_id = ntohs(server_addr.sin_port); // Using port as message ID
+    uint64_t latest_timestamp = static_cast<uint64_t>(time(nullptr)) * 1000; // Current time in milliseconds
+    // update timestamp in schemas id message_id
+    ionet::codec::Encoder encoder(*schema);
 
-    // Wait for the heartbeat thread to finish (for now)
-    heartbeat_thread.join();
-    std::cout << "Arguments parsed, schema loaded, and heartbeat thread finished." << std::endl;
+    ionet::schema::Packet packet = schema->findPacketById(message_id) ? 
+                    ionet::core::Packet(message_id, schema->findPacketById(message_id)->name) :
+                    ionet::core::Packet(message_id, "UnknownPacket");
+
+    if (packet.id == message_id) {
+        std::cout << "Found packet definition: " << packet.name << std::endl;
+        packet.set("timestamp", latest_timestamp);
+        packet.set("process_id", static_cast<int16_t>(getpid()));
+        packet.set("status", static_cast<uint8_t>(0)); // OK status
+        auto result = encoder.encode(packet);
+    } else {
+        std::cout << "Packet definition not found for ID: " << message_id << std::endl;
+    }
+
+    close(sockfd);
+    std::cout << "Socket created and closed successfully." << std::endl;
+    std::cout << "Arguments parsed, schema loaded, and heartbeat logic finished." << std::endl;
     return 0;
 }

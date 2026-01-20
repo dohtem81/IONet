@@ -1,6 +1,6 @@
 #include <../include/ionet/codec/Encoder.h>
 #include <../include/ionet/schema/Schema.h>
-#include <../include/ionet/core/Packet.h>
+#include <../include/ionet/schema/Packet.h>
 #include <../include/ionet/core/Result.h>
 #include <cstring>
 #include <stdexcept>

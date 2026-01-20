@@ -5,7 +5,7 @@
 #include <string>
 #include <optional>
 #include <ionet/schema/Schema.h>
-#include <ionet/core/Packet.h>
+#include <ionet/schema/Packet.h>
 #include <ionet/core/Result.h>
 
 namespace ionet {
@@ -22,7 +22,7 @@ public:
     ~Encoder();
 
     // Encode by packet ID or name (from Packet)
-    ionet::core::Result<std::vector<uint8_t>> encode(const ionet::core::Packet& packet) const;
+    ionet::core::Result<std::vector<uint8_t>> encode(const ionet::schema::Packet& packet) const;
 
 private:
     struct Impl;

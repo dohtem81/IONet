@@ -13,6 +13,9 @@ add_executable(ionet_tests
     test_schema.cpp
     test_schema_loader.cpp
     test_decoder.cpp
+    test_encoder.cpp      # Add test for Encoder
+    #test_packet.cpp       # Add test for Packet
+    #test_field.cpp        # Add test for Field (if applicable)
 )
 
 target_link_libraries(ionet_tests PRIVATE ionet Catch2::Catch2WithMain)

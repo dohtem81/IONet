@@ -18,7 +18,7 @@ struct BitFlag {
 /// Scaling parameters for integer-to-real conversion
 struct Scaling {
     double scale = 1.0;   // Multiplier
-    double offset = 0.0;  // Added after scaling
+    double offset = 0.0;  // Optional
     
     double apply(int64_t raw) const {
         return (static_cast<double>(raw) * scale) + offset;
@@ -43,8 +43,9 @@ struct Field {
     
     // Size info
     std::optional<std::size_t> arraySize;    // For arrays
-    std::optional<std::size_t> stringSize;   // For fixed-length strings
+    std::optional<std::size_t> stringSize;   // For string fields
     std::optional<uint8_t> bitCount;         // For bitfields (1-64)
+    std::optional<size_t> size;              // Add this for field size (e.g., string length)
     
     // Interpretation
     std::optional<Scaling> scaling;

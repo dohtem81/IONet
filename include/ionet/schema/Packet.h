@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <yaml-cpp/yaml.h>
 #include <variant>
+#include <unordered_map>
 
 namespace ionet::schema {
 
@@ -17,6 +18,11 @@ struct Packet {
     std::string name;
     std::string description;
     std::vector<Field> fields;
+
+    /// constructor
+    Packet() = default;  // Add default constructor
+    Packet(uint32_t packetId, const std::string& packetName)
+        : id(packetId), name(packetName) {}
     
     /// Calculate total byte size of packet
     std::size_t totalSize() const {
@@ -57,26 +63,69 @@ struct Packet {
 
     template<typename T>
     void set(const std::string& field, const T& value) {
-        // Store in an internal YAML::Node or std::map
-        data_[field] = value;
-    }
-
-    /// get raw value of a field
-    const YAML::Node& rawValue(const std::string& field) const {
-        return data_[field];
-    }
-
-    template<typename T>
-    bool tryGetValue(const std::variant<uint64_t, int64_t, double, std::string>& value, T& out) {
-        if (auto ptr = std::get_if<T>(&value)) {
-            out = *ptr;
-            return true;
+        if (hasField(field)) {
+            const Field* f = findField(field);
+            if (f && f->scaling && std::is_floating_point_v<T>) {
+                // For scaled fields, assume scaling multiplies to get raw uint64_t
+                // Adjust formula if Scaling has offset: (value + f->scaling.value().offset) * f->scaling.value().scale
+                double scaled = (static_cast<double>(value) + f->scaling.value().offset) / f->scaling.value().scale;
+                data_[field] = static_cast<uint64_t>(scaled);
+                return;
+            }
         }
-        return false;
+        // Normal storage
+        if constexpr (std::is_integral_v<T>) {
+            data_[field] = static_cast<uint64_t>(value);  // Sign-extends for signed types
+        } else if constexpr (std::is_floating_point_v<T>) {
+            data_[field] = static_cast<double>(value);
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            data_[field] = value;
+        } else {
+            throw std::runtime_error("Unsupported type for field: " + field);
+        }
+    }
+
+    const std::variant<uint64_t, int64_t, double, std::string>& rawValue(const std::string& field) const {
+        auto it = data_.find(field);
+        if (it == data_.end()) {
+            throw std::runtime_error("Field not found: " + field);
+        }
+        return it->second;
+    }
+
+    /// define new field and add it, recalculate total size
+    template<typename T>
+    void add(const std::string& field, const T& value) {
+        if (hasField(field)) {
+            throw std::runtime_error("Field already exists: " + field);
+        } else {
+            fields.push_back(Field{field});
+        }
+        // Cast to match variant types
+        if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+            data_[field] = static_cast<uint64_t>(value);
+        } else if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
+            data_[field] = static_cast<int64_t>(value);
+        } else if constexpr (std::is_floating_point_v<T>) {
+            data_[field] = static_cast<double>(value);
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            data_[field] = value;
+        } else {
+            throw std::runtime_error("Unsupported type for field: " + field);
+        }
+    }
+
+    /// list fields (from set data)
+    std::vector<std::string> listFields() const {
+        std::vector<std::string> fieldNames;
+        for (const auto& pair : data_) {
+            fieldNames.push_back(pair.first);
+        }
+        return fieldNames;
     }
 
 private:
-    YAML::Node data_; // or std::map<std::string, YAML::Node>      
+    std::unordered_map<std::string, std::variant<uint64_t, int64_t, double, std::string>> data_;
 };
 
 } // namespace ionet::schema

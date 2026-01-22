@@ -7,7 +7,7 @@ using namespace ionet::codec;
 using namespace ionet::schema;
 using namespace ionet::core;
 
-const char* TEST_SCHEMA = R"(
+const char* DECODER_TEST_SCHEMA = R"(
 schema:
   name: "TestSchema"
   version: "1.0"
@@ -95,7 +95,7 @@ packets:
 class DecoderFixture {
 protected:
     DecoderFixture() {
-        auto result = SchemaLoader::fromYaml(TEST_SCHEMA);
+        auto result = SchemaLoader::fromYaml(DECODER_TEST_SCHEMA);
         REQUIRE(result.ok());
         schema_ = std::make_unique<Schema>(std::move(result.value()));
     }

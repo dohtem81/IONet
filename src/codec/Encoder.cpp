@@ -25,9 +25,7 @@ ionet::core::Result<std::vector<uint8_t>> Encoder::encode(const ionet::schema::P
     // Find packet definition in schema
     const auto* pktDef = impl_->schema.findPacketById(packet.id);
     if (!pktDef) {
-        return ionet::core::Result<std::vector<uint8_t>>::error(
-            ionet::core::Result<std::vector<uint8_t>>::ErrorType{"Unknown packet ID: " + std::to_string(packet.id)}
-        );
+        return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Packet ID not found in schema: " + std::to_string(packet.id)));
     }
 
     std::vector<uint8_t> buffer;
@@ -35,54 +33,86 @@ ionet::core::Result<std::vector<uint8_t>> Encoder::encode(const ionet::schema::P
 
     for (const auto& field : pktDef->fields) {
         if (!packet.hasField(field.name)) {
-            return ionet::core::Result<std::vector<uint8_t>>::error("Missing field: " + field.name);
+            return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Missing field: " + field.name));
         }
 
         const auto& value = packet.rawValue(field.name);
 
         // Handle each type
         if (field.type == "uint8") {
-            buffer.push_back(static_cast<uint8_t>(std::get<uint64_t>(value)));
+            uint64_t v;
+            if (!tryGetValue(value, v)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
+            buffer.push_back(static_cast<uint8_t>(v));
         } else if (field.type == "int8") {
-            buffer.push_back(static_cast<uint8_t>(std::get<int64_t>(value)));
+            int64_t v;
+            if (!tryGetValue(value, v)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
+            buffer.push_back(static_cast<uint8_t>(v));
         } else if (field.type == "uint16") {
-            uint16_t v = static_cast<uint16_t>(std::get<uint64_t>(value));
+            uint64_t v;
+            if (!tryGetValue(value, v)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
             buffer.push_back((v >> 8) & 0xFF);
             buffer.push_back(v & 0xFF);
         } else if (field.type == "int16") {
-            int16_t v = static_cast<int16_t>(std::get<int64_t>(value));
+            int64_t v;
+            if (!tryGetValue(value, v)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
             buffer.push_back((v >> 8) & 0xFF);
             buffer.push_back(v & 0xFF);
         } else if (field.type == "uint32") {
-            uint32_t v = static_cast<uint32_t>(std::get<uint64_t>(value));
+            uint64_t v;
+            if (!tryGetValue(value, v)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
             buffer.push_back((v >> 24) & 0xFF);
             buffer.push_back((v >> 16) & 0xFF);
             buffer.push_back((v >> 8) & 0xFF);
             buffer.push_back(v & 0xFF);
         } else if (field.type == "int32") {
-            int32_t v = static_cast<int32_t>(std::get<int64_t>(value));
+            int64_t v;
+            if (!tryGetValue(value, v)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
             buffer.push_back((v >> 24) & 0xFF);
             buffer.push_back((v >> 16) & 0xFF);
             buffer.push_back((v >> 8) & 0xFF);
             buffer.push_back(v & 0xFF);
         } else if (field.type == "uint64") {
-            uint64_t v = std::get<uint64_t>(value);
+            uint64_t v;
+            if (!tryGetValue(value, v)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
             for (int i = 7; i >= 0; --i)
                 buffer.push_back((v >> (i * 8)) & 0xFF);
         } else if (field.type == "int64") {
-            int64_t v = std::get<int64_t>(value);
+            int64_t v;
+            if (!tryGetValue(value, v)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
             for (int i = 7; i >= 0; --i)
                 buffer.push_back((v >> (i * 8)) & 0xFF);
         } else if (field.type == "float32") {
-            float f = std::get<double>(value);
+            double d;
+            if (!tryGetValue(value, d)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
             uint32_t v;
-            std::memcpy(&v, &f, sizeof(float));
+            std::memcpy(&v, &d, sizeof(float));
             buffer.push_back((v >> 24) & 0xFF);
             buffer.push_back((v >> 16) & 0xFF);
             buffer.push_back((v >> 8) & 0xFF);
             buffer.push_back(v & 0xFF);
         } else if (field.type == "float64") {
-            double d = std::get<double>(value);
+            double d;
+            if (!tryGetValue(value, d)) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Type mismatch for field: " + field.name));
+            }
             uint64_t v;
             std::memcpy(&v, &d, sizeof(double));
             for (int i = 7; i >= 0; --i)

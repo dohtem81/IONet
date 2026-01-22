@@ -7,6 +7,7 @@
 #include <optional>
 #include <algorithm>
 #include <yaml-cpp/yaml.h>
+#include <variant>
 
 namespace ionet::schema {
 
@@ -49,11 +50,31 @@ struct Packet {
         return -1;
     }
 
+    /// hasField function to check existence of a field
+    bool hasField(const std::string& field) const {
+        return fieldIndex(field) != -1;
+    }
+
     template<typename T>
     void set(const std::string& field, const T& value) {
         // Store in an internal YAML::Node or std::map
         data_[field] = value;
     }
+
+    /// get raw value of a field
+    const YAML::Node& rawValue(const std::string& field) const {
+        return data_[field];
+    }
+
+    template<typename T>
+    bool tryGetValue(const std::variant<uint64_t, int64_t, double, std::string>& value, T& out) {
+        if (auto ptr = std::get_if<T>(&value)) {
+            out = *ptr;
+            return true;
+        }
+        return false;
+    }
+
 private:
     YAML::Node data_; // or std::map<std::string, YAML::Node>      
 };

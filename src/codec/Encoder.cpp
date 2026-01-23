@@ -33,37 +33,67 @@ ionet::core::Result<std::vector<uint8_t>> Encoder::encode(const ionet::schema::P
     buffer.reserve(64); // heuristic
 
     for (const auto& field : pktDef->fields) {
+        if (!packet.hasField(field.name)) {
+            return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Missing field: " + field.name));
+        }
+
         const auto& value = packet.rawValue(field.name);
 
-        // Handle each type
+        // Constraint validation (if not skipped)
+        if (!impl_->options.skipValidation) {
+            double scaledValue = 0.0;
+            bool hasScaling = field.scaling.has_value();
+            if (hasScaling) {
+                double raw = 0.0;
+                if (std::holds_alternative<int64_t>(value)) {
+                    raw = static_cast<double>(std::get<int64_t>(value));
+                } else if (std::holds_alternative<uint64_t>(value)) {
+                    raw = static_cast<double>(std::get<uint64_t>(value));
+                } else {
+                    return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Invalid value type for scaled field: " + field.name));
+                }
+                scaledValue = raw * field.scaling->scale + field.scaling->offset;
+            } else {
+                if (std::holds_alternative<double>(value)) {
+                    scaledValue = std::get<double>(value);
+                } else if (std::holds_alternative<int64_t>(value)) {
+                    scaledValue = static_cast<double>(std::get<int64_t>(value));
+                } else if (std::holds_alternative<uint64_t>(value)) {
+                    scaledValue = static_cast<double>(std::get<uint64_t>(value));
+                } // For strings/bitfields, skip scaling check
+            }
+
+            if (field.constraints.min && scaledValue < *field.constraints.min) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Value below minimum for field: " + field.name));
+            }
+            if (field.constraints.max && scaledValue > *field.constraints.max) {
+                return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Value above maximum for field: " + field.name));
+            }
+        }
+
+        // Encode based on type
         if (field.type == ionet::core::DataType::UInt8) {
-            uint64_t raw = std::get<uint64_t>(value);
-            uint8_t v = static_cast<uint8_t>(raw);
+            uint8_t v = static_cast<uint8_t>(std::get<uint64_t>(value));
             buffer.push_back(v);
         } else if (field.type == ionet::core::DataType::Int8) {
-            uint64_t raw = std::get<uint64_t>(value);
-            int8_t v = static_cast<int8_t>(raw);
+            int8_t v = static_cast<int8_t>(std::get<int64_t>(value));
             buffer.push_back(static_cast<uint8_t>(v));
         } else if (field.type == ionet::core::DataType::UInt16) {
-            uint64_t raw = std::get<uint64_t>(value);
-            uint16_t v = static_cast<uint16_t>(raw);
+            uint16_t v = static_cast<uint16_t>(std::get<uint64_t>(value));
             buffer.push_back((v >> 8) & 0xFF);
             buffer.push_back(v & 0xFF);
         } else if (field.type == ionet::core::DataType::Int16) {
-            uint64_t raw = std::get<uint64_t>(value);
-            int16_t v = static_cast<int16_t>(raw);
+            int16_t v = static_cast<int16_t>(std::get<int64_t>(value));
             buffer.push_back((v >> 8) & 0xFF);
             buffer.push_back(v & 0xFF);
         } else if (field.type == ionet::core::DataType::UInt32) {
-            uint64_t raw = std::get<uint64_t>(value);
-            uint32_t v = static_cast<uint32_t>(raw);
+            uint32_t v = static_cast<uint32_t>(std::get<uint64_t>(value));
             buffer.push_back((v >> 24) & 0xFF);
             buffer.push_back((v >> 16) & 0xFF);
             buffer.push_back((v >> 8) & 0xFF);
             buffer.push_back(v & 0xFF);
         } else if (field.type == ionet::core::DataType::Int32) {
-            uint64_t raw = std::get<uint64_t>(value);
-            int32_t v = static_cast<int32_t>(raw);
+            int32_t v = static_cast<int32_t>(std::get<int64_t>(value));
             buffer.push_back((v >> 24) & 0xFF);
             buffer.push_back((v >> 16) & 0xFF);
             buffer.push_back((v >> 8) & 0xFF);
@@ -73,13 +103,11 @@ ionet::core::Result<std::vector<uint8_t>> Encoder::encode(const ionet::schema::P
             for (int i = 7; i >= 0; --i)
                 buffer.push_back((v >> (i * 8)) & 0xFF);
         } else if (field.type == ionet::core::DataType::Int64) {
-            uint64_t raw = std::get<uint64_t>(value);
-            int64_t v = static_cast<int64_t>(raw);
+            int64_t v = std::get<int64_t>(value);
             for (int i = 7; i >= 0; --i)
                 buffer.push_back((v >> (i * 8)) & 0xFF);
         } else if (field.type == ionet::core::DataType::Float32) {
-            double d = std::get<double>(value);
-            float f = static_cast<float>(d);
+            float f = static_cast<float>(std::get<double>(value));
             uint32_t v;
             std::memcpy(&v, &f, sizeof(float));
             buffer.push_back((v >> 24) & 0xFF);
@@ -92,14 +120,29 @@ ionet::core::Result<std::vector<uint8_t>> Encoder::encode(const ionet::schema::P
             std::memcpy(&v, &d, sizeof(double));
             for (int i = 7; i >= 0; --i)
                 buffer.push_back((v >> (i * 8)) & 0xFF);
+        } else if (field.type == ionet::core::DataType::Bitfield) {
+            uint64_t v = std::get<uint64_t>(value);
+            uint8_t bitCount = field.bitCount.value_or(8);
+            if (bitCount <= 8) {
+                buffer.push_back(v & 0xFF);
+            } else if (bitCount <= 16) {
+                buffer.push_back((v >> 8) & 0xFF);
+                buffer.push_back(v & 0xFF);
+            } else if (bitCount <= 32) {
+                buffer.push_back((v >> 24) & 0xFF);
+                buffer.push_back((v >> 16) & 0xFF);
+                buffer.push_back((v >> 8) & 0xFF);
+                buffer.push_back(v & 0xFF);
+            } else {
+                for (int i = 7; i >= 0; --i)
+                    buffer.push_back((v >> (i * 8)) & 0xFF);
+            }
         } else if (field.type == ionet::core::DataType::String) {
             std::string str = std::get<std::string>(value);
-            size_t sz = field.stringSize.value_or(0);
-            for (size_t i = 0; i < sz; ++i) {
-                if (i < str.size())
-                    buffer.push_back(static_cast<uint8_t>(str[i]));
-                else
-                    buffer.push_back(0);
+            std::size_t size = field.stringSize.value_or(str.size());
+            buffer.insert(buffer.end(), str.begin(), str.end());
+            if (size > str.size()) {
+                buffer.insert(buffer.end(), size - str.size(), 0);
             }
         } else {
             return ionet::core::Result<std::vector<uint8_t>>(ionet::core::Error("Unsupported field type"));

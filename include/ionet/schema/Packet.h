@@ -65,17 +65,26 @@ struct Packet {
     void set(const std::string& field, const T& value) {
         if (hasField(field)) {
             const Field* f = findField(field);
-            if (f && f->scaling && std::is_floating_point_v<T>) {
-                // For scaled fields, assume scaling multiplies to get raw uint64_t
-                // Adjust formula if Scaling has offset: (value + f->scaling.value().offset) * f->scaling.value().scale
-                double scaled = (static_cast<double>(value) + f->scaling.value().offset) / f->scaling.value().scale;
-                data_[field] = static_cast<uint64_t>(scaled);
-                return;
+            if constexpr (std::is_floating_point_v<T>) {
+                if (f && f->scaling) {
+                    // For scaled fields, raw = (value - offset) / scale
+                    double raw = (static_cast<double>(value) - f->scaling.value().offset) / f->scaling.value().scale;
+                    // Set as int64_t for signed types, uint64_t for unsigned
+                    if (f->type == core::DataType::Int8 || f->type == core::DataType::Int16 ||
+                        f->type == core::DataType::Int32 || f->type == core::DataType::Int64) {
+                        data_[field] = static_cast<int64_t>(raw);
+                    } else {
+                        data_[field] = static_cast<uint64_t>(raw);
+                    }
+                    return;
+                }
             }
         }
-        // Normal storage
-        if constexpr (std::is_integral_v<T>) {
-            data_[field] = static_cast<uint64_t>(value);  // Sign-extends for signed types
+        // Normal storage: match 'add' logic
+        if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
+            data_[field] = static_cast<int64_t>(value);
+        } else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T>) {
+            data_[field] = static_cast<uint64_t>(value);
         } else if constexpr (std::is_floating_point_v<T>) {
             data_[field] = static_cast<double>(value);
         } else if constexpr (std::is_same_v<T, std::string>) {

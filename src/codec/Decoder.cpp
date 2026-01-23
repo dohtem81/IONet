@@ -234,7 +234,7 @@ core::Value Decoder::applyScaling(
         return rawValue;
     }
     
-    // Apply: scaled = (raw * scale) + offset
+    // Apply: scaled = (raw * scale) - offset
     double scaled = (raw * scaling.scale) + scaling.offset;
     return scaled;
 }

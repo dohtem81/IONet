@@ -12,8 +12,7 @@ namespace ionet {
 namespace codec {
 
 struct EncodeOptions {
-    bool validateConstraints = true;
-    // Add more options as needed
+    bool skipValidation = false;  // Add this
 };
 
 class Encoder {

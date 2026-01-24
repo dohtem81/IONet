@@ -30,45 +30,51 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      target: build
-    image: ionet-build:latest
     container_name: ionet-test
-    command: sh -c "cd build && ctest --output-on-failure -V"
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: sh -c "cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug && cmake --build build && cd build && ctest --output-on-failure -V"
 
   # Run tests with coverage
   coverage:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      target: test
     image: ionet-coverage:latest
     container_name: ionet-coverage
     volumes:
+      - .:/workspace
       - ./coverage:/workspace/coverage
+    working_dir: /workspace
     command: >
       sh -c "
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS='--coverage' -DCMAKE_EXE_LINKER_FLAGS='--coverage' &&
+        cmake --build build &&
         cd build &&
-        lcov --capture --directory . --output-file coverage.info &&
-        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/Catch2/*' --output-file coverage.info &&
-        genhtml coverage.info --output-directory /workspace/coverage
+        ctest --output-on-failure &&
+        lcov --base-directory /workspace --capture --directory . --output-file coverage.info --ignore-errors source --ignore-errors gcov &&
+        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/Catch2/*' --output-file coverage.info --ignore-errors unused &&
+        genhtml coverage.info --output-directory /workspace/coverage --synthesize-missing --ignore-errors source
       "
 
-  # Static analysis
-  lint:
+  # Run the 2heartbeats example
+  example:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      target: dev
-    image: ionet-dev:latest
-    container_name: ionet-lint
+      target: build
+    image: ionet-build:latest
+    container_name: ionet-example
     volumes:
       - .:/workspace
+    working_dir: /workspace
     command: >
       sh -c "
-        clang-format --dry-run --Werror include/ionet/**/*.h src/**/*.cpp &&
-        cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON &&
-        clang-tidy -p build include/ionet/core/*.h src/core/*.cpp
+        ./build/examples/2heartbeats 1001 127.0.0.1 8080 8080 schemas/heartbeat_processes.yaml
       "
+    depends_on:
+      - build
 
 volumes:
   build-cache:

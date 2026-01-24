@@ -123,6 +123,33 @@ ctest --test-dir build --output-on-failure
 
 See [tests/](tests/) for available test suites.
 
+## Running Examples
+
+The project includes example applications demonstrating IONet usage. Here's how to build and run the 2heartbeats example:
+
+```bash
+# Build the project first
+cmake --build build
+
+# Run the 2heartbeats example
+# Usage: 2heartbeats <processId> <IPv4/DNS> <inport> <outport> <schema_file>
+# To see bidirectional communication, run two instances:
+./build/examples/2heartbeats/2heartbeats 1001 127.0.0.1 8080 8081 schemas/heartbeat_processes.yaml &
+./build/examples/2heartbeats/2heartbeats 1002 127.0.0.1 8081 8080 schemas/heartbeat_processes.yaml &
+```
+
+Or using Docker Compose:
+```bash
+docker-compose run --rm example
+```
+
+This example demonstrates:
+- Loading a schema from a YAML file
+- Setting up UDP sockets for sending and receiving heartbeats
+- Encoding and sending periodic heartbeat packets (every 50ms for ~500ms)
+- Receiving and decoding incoming heartbeat packets
+- Using process-specific packet types (1001 for Process A, 1002 for Process B)
+
 ## Example Schemas
 
 Check [schemas/example_telemetry.yaml](schemas/example_telemetry.yaml) for a complete schema example.
@@ -207,7 +234,7 @@ cmake --build build
 
 ## Background
 
-This project is a C++ implementation of an idea I first developed years ago in C++ - a system where all TCP communication is defined in configuration files. The actual application code doesn't need to know anything about the underlying message format; it simply accesses ready-to-use structured data.
+This project is a C++ implementation of an idea I first developed years ago in C++ - a system where all network communication is defined in configuration files. The actual application code doesn't need to know anything about the underlying message format; it simply accesses ready-to-use structured data.
 
 This design:
 - Separates protocol concerns from business logic

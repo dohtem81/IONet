@@ -134,8 +134,7 @@ cmake --build build
 # Run the 2heartbeats example
 # Usage: 2heartbeats <processId> <IPv4/DNS> <inport> <outport> <schema_file>
 # To see bidirectional communication, run two instances:
-./build/examples/2heartbeats/2heartbeats 1001 127.0.0.1 8080 8081 schemas/heartbeat_processes.yaml &
-./build/examples/2heartbeats/2heartbeats 1002 127.0.0.1 8081 8080 schemas/heartbeat_processes.yaml &
+./build/examples/2heartbeats 1001 127.0.0.1 8080 8080 schemas/heartbeat_processes.yaml
 ```
 
 Or using Docker Compose:
